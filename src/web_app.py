@@ -1,0 +1,436 @@
+import streamlit as st
+import os
+import sys
+import time
+import re
+import json
+import concurrent.futures
+from datetime import datetime
+import shutil
+
+# 添加 src 到路径以便导入模块
+sys.path.append(os.path.dirname(__file__))
+
+from main import DesignWorkflow
+import config
+import md_parser
+
+# 设置页面配置
+st.set_page_config(
+    page_title="AI 设计工作流 (AI Design Workflow)",
+    page_icon="🎨",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# 自定义 CSS
+st.markdown("""
+<style>
+    .report-content {
+        background-color: #ffffff;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        border: none;
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        color: #1a1a1a; /* 强制字体颜色为深色 */
+    }
+    .stButton>button {
+        border-radius: 8px;
+        height: 3rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        color: #1a1a1a; /* 确保按钮文字颜色为深色 */
+        background-color: #ffffff; /* 确保背景为白色 */
+        border: 1px solid #e0e0e0;
+    }
+    /* 针对 markdown 容器内的所有文本强制深色 */
+    .stMarkdown p, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown li {
+        color: #1a1a1a !important;
+    }
+    /* 修复 Tab 标签页内的文本颜色 */
+    .stTabs [data-baseweb="tab"] {
+         color: #1a1a1a !important;
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    h1, h2, h3 {
+        font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #1a1a1a;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        border-radius: 8px;
+        padding: 4px;
+        background-color: #f1f5f9;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 6px;
+        padding: 8px 16px;
+        background-color: transparent;
+        border: none;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .sidebar-content {
+        padding: 1rem;
+        border-radius: 8px;
+        background: #f8fafc;
+        margin-bottom: 1rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+class StreamlitLogger:
+    """
+    适配器：将 DesignWorkflow 的日志重定向到 Streamlit 界面
+    """
+    def __init__(self, log_container):
+        self.log_container = log_container
+        self.logs = []
+
+    def log(self, message):
+        timestamp = datetime.now().strftime('%H:%M:%S')
+        log_entry = f"[{timestamp}] {message}"
+        self.logs.append(log_entry)
+        
+        # 实时更新 UI
+        if self.log_container:
+            with self.log_container:
+                # 只显示最近的 10 条日志
+                log_text = "\n".join(self.logs[-10:])
+                st.code(log_text, language="text")
+
+class WebDesignWorkflow(DesignWorkflow):
+    """
+    继承 DesignWorkflow，适配 Web 端交互
+    """
+    def __init__(self, output_dir, custom_config, logger):
+        super().__init__(output_dir, custom_config)
+        self.logger = logger
+        # 复用父类的 generated_images
+
+    def log(self, message):
+        self.logger.log(message)
+
+    # 重写 step_image_generation 以支持 Streamlit 进度条
+    def step_image_generation(self, prompts_list):
+        if not prompts_list:
+            self.log("    ⚠️ 未检测到有效 Prompt，跳过绘图。")
+            return
+
+        clean_prompts = [p.get("prompt", "") for p in prompts_list if p.get("prompt")]
+        if not clean_prompts:
+            return
+
+        total = len(clean_prompts)
+        self.log(f"    - 准备并行生成 {total} 张方案图...")
+        
+        progress_bar = st.progress(0, text="正在生成图片...")
+        completed = 0
+        
+        def generate_single(p):
+            try:
+                return self.image_gen.generate_image(p, self.output_dir)
+            except Exception as e:
+                self.log(f"Error generating image: {e}")
+                return None
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            futures = [executor.submit(generate_single, p) for p in clean_prompts]
+            for future in concurrent.futures.as_completed(futures):
+                img_path = future.result()
+                if img_path:
+                    self.log(f"      -> 图片已保存: {os.path.basename(img_path)}")
+                    self.generated_images.append(img_path)
+                
+                completed += 1
+                progress_bar.progress(completed / total, text=f"正在生成第 {completed}/{total} 张图片...")
+        
+        progress_bar.empty()
+
+def init_session_state():
+    defaults = {
+        "project_name": "Polaroid_Bag_Design",
+        "brief": "做一款拍立得相机包，需要参考市场中高端品牌的女性包包去结合设计一些相机包",
+        "market_analysis": "",
+        "visual_research": "",
+        "design_proposals": "",
+        "design_prompts": [],
+        "generated_images": [],
+        "full_report": "",
+        "logs": []
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
+
+def load_history_project(project_name):
+    """
+    加载历史项目数据到 Session State
+    """
+    root_dir = os.path.dirname(os.path.dirname(__file__))
+    project_dir = os.path.join(root_dir, "projects", project_name)
+    
+    if not os.path.exists(project_dir):
+        st.error(f"项目 {project_name} 不存在")
+        return
+
+    st.session_state.project_name = project_name
+    
+    # 尝试加载各个 Markdown 文件
+    def read_file(fname):
+        path = os.path.join(project_dir, fname)
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                return f.read()
+        return ""
+
+    st.session_state.market_analysis = read_file("1_Market_Analysis.md")
+    st.session_state.visual_research = read_file("2_Visual_Research.md")
+    st.session_state.design_proposals = read_file("3_Design_Proposals.md")
+    st.session_state.full_report = read_file("Full_Design_Report.md")
+    
+    # 尝试加载图片
+    # 扫描目录下所有 jpg/png
+    images = []
+    for f in os.listdir(project_dir):
+        if f.lower().endswith(('.jpg', '.jpeg', '.png')):
+            images.append(os.path.join(project_dir, f))
+    
+    # 按时间排序图片（如果文件名包含时间戳）
+    images.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    # 使用绝对路径
+    st.session_state.generated_images = [os.path.abspath(p) for p in images]
+    
+    st.success(f"已加载项目: {project_name}")
+
+def get_workflow(project_dir, model_name, log_container=None):
+    root_dir = os.path.dirname(os.path.dirname(__file__))
+    custom_config = {
+        'OPENAI_API_KEY': config.OPENAI_API_KEY,
+        'OPENAI_BASE_URL': config.OPENAI_BASE_URL,
+        'DEFAULT_MODEL': model_name,
+        'prompts': md_parser.parse_config_md(os.path.join(root_dir, "CONFIG.md")).get('prompts', {})
+    }
+    logger = StreamlitLogger(log_container)
+    return WebDesignWorkflow(project_dir, custom_config, logger)
+
+def main():
+    st.title("🎨 AI 设计工作流 (AI Design Workflow)")
+    st.markdown("基于 Gemini 和 Jimeng 的全自动设计助手")
+
+    init_session_state()
+
+    # --- 侧边栏配置 ---
+    with st.sidebar:
+        # 1. 历史项目 (History)
+        st.header("📂 历史项目")
+        
+        # 扫描 projects 文件夹
+        root_dir = os.path.dirname(os.path.dirname(__file__))
+        projects_dir = os.path.join(root_dir, "projects")
+        
+        existing_projects = []
+        if os.path.exists(projects_dir):
+            existing_projects = [d for d in os.listdir(projects_dir) if os.path.isdir(os.path.join(projects_dir, d))]
+            # 按修改时间倒序排列
+            existing_projects.sort(key=lambda x: os.path.getmtime(os.path.join(projects_dir, x)), reverse=True)
+        
+        selected_project = st.selectbox(
+            "选择历史项目加载", 
+            ["-- 新建项目 --"] + existing_projects,
+            index=0
+        )
+        
+        if selected_project != "-- 新建项目 --":
+            if st.button("📂 加载选中项目"):
+                load_history_project(selected_project)
+        
+        st.divider()
+
+        st.header("⚙️ 系统配置")
+        
+        model_options = [
+            "gemini-2.0-flash-exp",
+            "gemini-1.5-pro", 
+            "gemini-1.5-flash",
+            "gemini-2.5-flash"
+        ]
+        model_name = st.selectbox("模型选择 (Gemini)", model_options, index=0)
+        
+        st.divider()
+        with st.expander("📚 查看知识库"):
+            kb_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "KNOWLEDGE.md")
+            if os.path.exists(kb_path):
+                with open(kb_path, 'r', encoding='utf-8') as f:
+                    st.text(f.read())
+
+    # --- 主界面 ---
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.session_state.project_name = st.text_input("项目名称", value=st.session_state.project_name)
+    
+    st.session_state.brief = st.text_area("✍️ 请输入设计需求", height=100, value=st.session_state.brief)
+
+    # 全局运行按钮
+    if st.button("🚀 一键生成全流程", type="primary", use_container_width=True):
+        st.session_state.logs = [] # 清空旧日志
+        
+        root_dir = os.path.dirname(os.path.dirname(__file__))
+        project_dir = os.path.join(root_dir, "projects", st.session_state.project_name)
+        
+        st.subheader("📝 运行日志")
+        log_container = st.empty()
+        wf = get_workflow(project_dir, model_name, log_container)
+        
+        with st.spinner('AI 正在全速运转中...'):
+            # Step 1
+            wf.log("开始市场分析...")
+            m_analysis, _ = wf.step_market_analysis(st.session_state.brief)
+            st.session_state.market_analysis = m_analysis
+            wf._save_intermediate("1_Market_Analysis.md", m_analysis)
+            
+            # Step 2
+            wf.log("开始视觉调研...")
+            v_research, _ = wf.step_visual_research(st.session_state.brief, m_analysis)
+            st.session_state.visual_research = v_research
+            wf._save_intermediate("2_Visual_Research.md", v_research)
+            
+            # Step 3
+            wf.log("开始方案设计...")
+            d_proposals, d_prompts = wf.step_design_generation(st.session_state.brief, m_analysis, v_research)
+            st.session_state.design_proposals = d_proposals
+            st.session_state.design_prompts = d_prompts
+            wf._save_intermediate("3_Design_Proposals.md", d_proposals)
+            
+            # Step 4
+            wf.log("开始生成最终效果图...")
+            wf.step_image_generation(d_prompts)
+            st.session_state.generated_images = wf.generated_images # 更新图片列表
+            
+            # Step 5
+            report_path = wf._save_report(st.session_state.brief, m_analysis, v_research, d_proposals)
+            st.session_state.full_report = f"报告已生成: {report_path}"
+            
+        st.success("全流程任务完成！")
+
+    st.divider()
+
+    # --- 模块化展示与操作 ---
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "📈 市场分析", 
+        "🎨 视觉调研", 
+        "💡 方案设计", 
+        "🖼️ 最终图库",
+        "📋 完整报告"
+    ])
+
+    root_dir = os.path.dirname(os.path.dirname(__file__))
+    project_dir = os.path.join(root_dir, "projects", st.session_state.project_name)
+
+    # Tab 1: 市场分析
+    with tab1:
+        col_t1_1, col_t1_2 = st.columns([4, 1])
+        with col_t1_2:
+            if st.button("🔄 重新生成市场分析"):
+                with st.spinner("正在重新分析市场..."):
+                    wf = get_workflow(project_dir, model_name)
+                    res, _ = wf.step_market_analysis(st.session_state.brief)
+                    st.session_state.market_analysis = res
+                    wf._save_intermediate("1_Market_Analysis.md", res)
+                    st.rerun()
+        
+        st.markdown(st.session_state.market_analysis if st.session_state.market_analysis else "暂无内容，请点击生成。")
+
+    # Tab 2: 视觉调研
+    with tab2:
+        col_t2_1, col_t2_2 = st.columns([4, 1])
+        with col_t2_2:
+            if st.button("🔄 重新生成视觉调研"):
+                if not st.session_state.market_analysis:
+                    st.error("请先生成市场分析报告！")
+                else:
+                    with st.spinner("正在重新调研视觉..."):
+                        wf = get_workflow(project_dir, model_name)
+                        res, _ = wf.step_visual_research(st.session_state.brief, st.session_state.market_analysis)
+                        st.session_state.visual_research = res
+                        wf._save_intermediate("2_Visual_Research.md", res)
+                        st.rerun()
+        
+        st.markdown(st.session_state.visual_research if st.session_state.visual_research else "暂无内容，请点击生成。")
+
+    # Tab 3: 方案设计
+    with tab3:
+        col_t3_1, col_t3_2 = st.columns([4, 1])
+        with col_t3_2:
+            if st.button("🔄 重新生成设计方案"):
+                if not st.session_state.visual_research:
+                    st.error("请先生成视觉调研报告！")
+                else:
+                    with st.spinner("正在重新设计方案..."):
+                        wf = get_workflow(project_dir, model_name)
+                        res, prompts = wf.step_design_generation(st.session_state.brief, st.session_state.market_analysis, st.session_state.visual_research)
+                        st.session_state.design_proposals = res
+                        st.session_state.design_prompts = prompts
+                        wf._save_intermediate("3_Design_Proposals.md", res)
+                        st.rerun()
+        
+        st.markdown(st.session_state.design_proposals if st.session_state.design_proposals else "暂无内容，请点击生成。")
+
+    # Tab 4: 最终图库
+    with tab4:
+        col_t4_1, col_t4_2 = st.columns([4, 1])
+        with col_t4_2:
+            if st.button("🎨 仅重新生成图片"):
+                if not st.session_state.design_prompts:
+                    st.error("暂无设计 Prompt，请先生成方案！")
+                else:
+                    with st.spinner("正在重新绘图..."):
+                        wf = get_workflow(project_dir, model_name)
+                        wf.step_image_generation(st.session_state.design_prompts)
+                        # 合并新生成的图片
+                        st.session_state.generated_images.extend(wf.generated_images)
+                        st.rerun()
+
+        if st.session_state.generated_images:
+            cols = st.columns(3)
+            for idx, img_path in enumerate(st.session_state.generated_images):
+                with cols[idx % 3]:
+                    # 确保路径存在且是绝对路径
+                    abs_path = os.path.abspath(img_path)
+                    if os.path.exists(abs_path):
+                        st.image(abs_path, caption=f"Img {idx+1}", use_container_width=True)
+                        
+                        # 添加下载按钮
+                        with open(abs_path, "rb") as file:
+                            btn = st.download_button(
+                                label="📥 下载图片",
+                                data=file,
+                                file_name=os.path.basename(abs_path),
+                                mime="image/jpeg",
+                                key=f"download_btn_{idx}"
+                            )
+                    else:
+                        st.warning(f"图片文件未找到: {img_path}")
+        else:
+            st.info("暂无生成的图片")
+
+    # Tab 5: 完整报告
+    with tab5:
+        if st.button("📄 合成/刷新完整报告"):
+            wf = get_workflow(project_dir, model_name)
+            report_path = wf._save_report(st.session_state.brief, st.session_state.market_analysis, st.session_state.visual_research, st.session_state.design_proposals)
+            st.success(f"报告已保存: {report_path}")
+            
+            with open(report_path, 'r', encoding='utf-8') as f:
+                report_content = f.read()
+                st.markdown(report_content)
+                st.download_button("📥 下载 Markdown", report_content, "Full_Report.md")
+
+if __name__ == "__main__":
+    main()
