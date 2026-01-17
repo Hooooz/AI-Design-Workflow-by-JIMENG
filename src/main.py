@@ -135,7 +135,8 @@ class DesignWorkflow:
                         self.log(f"      -> 生成插图: {concept}...")
                         img_path = self.image_gen.generate_image(prompt, self.output_dir)
                         if img_path:
-                            rel_path = os.path.basename(img_path)
+                            # 修复：使用相对于项目目录的路径，而不是仅文件名
+                            rel_path = os.path.relpath(img_path, self.output_dir)
                             final_content += f"\n![{concept}]({rel_path})\n*图示：{concept}*\n"
                             self.generated_images.append(img_path)
             

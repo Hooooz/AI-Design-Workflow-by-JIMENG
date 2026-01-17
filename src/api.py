@@ -41,7 +41,7 @@ class ProjectMetadata(BaseModel):
 class ProjectCreate(BaseModel):
     project_name: str
     brief: str
-    model_name: str = "gemini-2.0-flash-exp"
+    model_name: str = "models/gemini-2.5-flash" # Default to working model
 
 class StepRequest(BaseModel):
     project_name: str
@@ -52,11 +52,11 @@ class StepRequest(BaseModel):
 
 class AutocompleteRequest(BaseModel):
     brief: str
-    model_name: str = "gemini-2.5-flash-lite"
+    model_name: str = "models/gemma-3-12b-it"
 
 class TagsRequest(BaseModel):
     brief: str
-    model_name: str = "gemini-2.5-flash-lite"
+    model_name: str = "models/gemini-2.5-flash-lite"
 
 # Helper to manage metadata
 def get_metadata(project_dir: str) -> Optional[ProjectMetadata]:
@@ -191,19 +191,30 @@ def run_step(req: StepRequest):
     prompts = []
     
     try:
+        # Determine model based on step to enforce "Best Model for Task" strategy
+        step_model = req.model_name
+        
+        # Enforce model mapping based on task type
+        if req.step in ["market_analysis", "visual_research"]:
+            # Research tasks: gemini-2.5-flash
+            step_model = "models/gemini-2.5-flash"
+        elif req.step == "design_generation":
+            # Prompt/Design tasks: gemini-3-flash
+            step_model = "models/gemini-3-flash-preview"
+
         if req.step == "market_analysis":
-            result, _ = workflow.step_market_analysis(req.brief)
+            result, _ = workflow.step_market_analysis(req.brief, model=step_model)
             workflow._save_intermediate("1_Market_Analysis.md", result)
             
         elif req.step == "visual_research":
             market_analysis = req.context.get("market_analysis", "")
-            result, _ = workflow.step_visual_research(req.brief, market_analysis)
+            result, _ = workflow.step_visual_research(req.brief, market_analysis, model=step_model)
             workflow._save_intermediate("2_Visual_Research.md", result)
             
         elif req.step == "design_generation":
             market_analysis = req.context.get("market_analysis", "")
             visual_research = req.context.get("visual_research", "")
-            result, prompts = workflow.step_design_generation(req.brief, market_analysis, visual_research)
+            result, prompts = workflow.step_design_generation(req.brief, market_analysis, visual_research, model=step_model)
             workflow._save_intermediate("3_Design_Proposals.md", result)
             
         elif req.step == "image_generation":

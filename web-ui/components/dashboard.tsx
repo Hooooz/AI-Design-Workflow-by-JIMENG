@@ -18,6 +18,7 @@ import {
   Share2
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { cn } from "@/lib/utils"
 
 interface DashboardProps {
@@ -28,7 +29,7 @@ interface DashboardProps {
 const STEPS = [
   { id: "market_analysis", label: "市场分析", icon: TrendingUp },
   { id: "visual_research", label: "视觉调研", icon: Palette },
-  { id: "design_generation", label: "设计提案", icon: Sparkles },
+  { id: "design_proposals", label: "设计提案", icon: Sparkles },
   { id: "image_generation", label: "创意图库", icon: ImageIcon },
   { id: "full_report", label: "完整报告", icon: FileText },
 ]
@@ -81,9 +82,37 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
             images: projectData.images
           })
           
-          if (projectData.metadata.status === "in_progress") {
-             // In real app, we might poll or use WebSocket. For now, simple polling
-             setTimeout(() => onProjectCreated(projectData.metadata.project_name), 3000) 
+          // 修复：只有在当前项目确实需要刷新时才调用回调
+          // 避免在切换项目时强制跳转回运行中的任务
+          if (projectData.metadata.status === "in_progress" && project === projectData.metadata.project_name) {
+             // 使用更智能的轮询机制而不是强制跳转
+             const pollInterval = setInterval(() => {
+               fetch(`${API_URL}/api/project/${project}`)
+                 .then(res => res.json())
+                 .then(updatedData => {
+                   setStatus(updatedData.metadata.status)
+                   setCurrentStep(updatedData.metadata.current_step)
+                   setData(prev => ({
+                     ...prev,
+                     market_analysis: updatedData.market_analysis,
+                     visual_research: updatedData.visual_research,
+                     design_proposals: updatedData.design_proposals,
+                     full_report: updatedData.full_report,
+                     images: updatedData.images
+                   }))
+                   
+                   if (updatedData.metadata.status !== "in_progress") {
+                     clearInterval(pollInterval)
+                   }
+                 })
+                 .catch(err => {
+                   console.error("轮询失败:", err)
+                   clearInterval(pollInterval)
+                 })
+             }, 2000) // 每2秒轮询一次
+             
+             // 清理函数
+             return () => clearInterval(pollInterval)
           }
         })
         .catch(err => console.error(err))
@@ -178,6 +207,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
             market_analysis: data.market_analysis,
             visual_research: data.visual_research,
             design_proposals: data.design_proposals,
+            design_prompts: data.design_proposals, // 修复：为image_generation步骤提供正确的键名
           }
         })
       })
@@ -214,28 +244,25 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
     setProgress(10)
     
     try {
-        setCurrentStep("market_analysis")
-        await runStep("market_analysis")
-        setProgress(30)
+        // 修复：使用顺序执行并正确更新进度
+        const steps = [
+          { id: "market_analysis", progress: 30 },
+          { id: "visual_research", progress: 50 },
+          { id: "design_proposals", progress: 70 },
+          { id: "image_generation", progress: 90 },
+          { id: "full_report", progress: 100 }
+        ]
         
-        setCurrentStep("visual_research")
-        await runStep("visual_research")
-        setProgress(50)
+        for (const step of steps) {
+          setCurrentStep(step.id)
+          setProgress(step.progress)
+          await runStep(step.id)
+        }
         
-        setCurrentStep("design_generation")
-        await runStep("design_generation")
-        setProgress(70)
-        
-        setCurrentStep("image_generation")
-        await runStep("image_generation")
-        setProgress(90)
-        
-        setCurrentStep("full_report")
-        await runStep("full_report")
-        setProgress(100)
         setStatus("completed")
     } catch (e) {
         setStatus("failed")
+        console.error("运行失败:", e)
     } finally {
         setLoading(false)
     }
@@ -419,7 +446,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                 <div className="p-4 flex-[2]">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1 block">设计需求</label>
                     <p className="text-zinc-600 dark:text-zinc-400 text-xs leading-relaxed line-clamp-2 italic">
-                        "{brief}"
+                        &quot;{brief}&quot;
                     </p>
                 </div>
             </div>
@@ -504,9 +531,56 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                         </div>
                     ) : (
                         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-10 shadow-sm min-h-[600px]">
-                            <div className="prose prose-zinc max-w-none dark:prose-invert">
+                            <div className="prose prose-zinc prose-lg max-w-none dark:prose-invert 
+                                prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight 
+                                prose-h1:text-4xl prose-h1:mb-8 prose-h1:pb-4 prose-h1:border-b prose-h1:border-zinc-100 dark:prose-h1:border-zinc-800
+                                prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:flex prose-h2:items-center prose-h2:gap-3
+                                prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-p:leading-relaxed prose-p:mb-6
+                                prose-li:text-zinc-600 dark:prose-li:text-zinc-400 prose-li:mb-2
+                                prose-strong:text-zinc-900 dark:prose-strong:text-white
+                                prose-blockquote:border-l-4 prose-blockquote:border-zinc-200 dark:prose-blockquote:border-zinc-700 prose-blockquote:bg-zinc-50 dark:prose-blockquote:bg-zinc-800/50 prose-blockquote:py-2 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-blockquote:italic
+                                prose-table:border prose-table:border-zinc-100 dark:prose-table:border-zinc-800 prose-table:rounded-xl prose-table:overflow-hidden
+                                prose-th:bg-zinc-50 dark:prose-th:bg-zinc-800 prose-th:px-4 prose-th:py-3 prose-th:text-xs prose-th:font-bold prose-th:uppercase prose-th:tracking-wider
+                                prose-td:px-4 prose-td:py-3 prose-td:text-sm prose-td:border-t prose-td:border-zinc-100 dark:prose-td:border-zinc-800">
                                 {data[activeTab] ? (
-                                    <ReactMarkdown>{data[activeTab]}</ReactMarkdown>
+                                    <ReactMarkdown
+                                        remarkPlugins={[remarkGfm]}
+                                        components={{
+                                            h1: ({ node, ...props }) => <h1 {...props} className="text-zinc-900 dark:text-white" />,
+                                            h2: ({ node, ...props }) => (
+                                                <h2 {...props} className="text-zinc-800 dark:text-zinc-100 group">
+                                                    <span className="w-1.5 h-6 bg-zinc-900 dark:bg-zinc-100 rounded-full inline-block" />
+                                                    {props.children}
+                                                </h2>
+                                            ),
+                                            h3: ({ node, ...props }) => <h3 {...props} className="text-zinc-800 dark:text-zinc-200 mt-8 mb-4 font-bold" />,
+                                            img: ({ node, ...props }) => {
+                                                const src = typeof props.src === 'string' ? props.src : '';
+                                                const isRelative = src && !src.startsWith('http') && !src.startsWith('https') && !src.startsWith('/');
+                                                const finalSrc = isRelative ? `${API_URL}/projects/${project}/${src}` : src;
+                                                return (
+                                                    <span className="block my-10 flex flex-col items-center gap-3">
+                                                        <img 
+                                                            {...props} 
+                                                            src={finalSrc} 
+                                                            className="max-w-full max-h-[500px] object-contain rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 transition-transform hover:scale-[1.01]" 
+                                                        />
+                                                        {props.alt && <span className="text-xs font-medium text-zinc-400 italic">图示：{props.alt}</span>}
+                                                    </span>
+                                                );
+                                            },
+                                            table: ({ node, ...props }) => (
+                                                <div className="my-8 overflow-hidden border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm">
+                                                    <table {...props} className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800" />
+                                                </div>
+                                            ),
+                                            blockquote: ({ node, ...props }) => (
+                                                <blockquote {...props} className="not-prose my-8 border-l-4 border-zinc-900 dark:border-zinc-100 bg-zinc-50 dark:bg-zinc-800/50 p-6 rounded-r-2xl text-zinc-700 dark:text-zinc-300 italic shadow-sm" />
+                                            )
+                                        }}
+                                    >
+                                        {data[activeTab]}
+                                    </ReactMarkdown>
                                 ) : (
                                     <div className="py-24 text-center text-zinc-300">
                                         <FileText className="h-12 w-12 mx-auto mb-4 opacity-20" />
