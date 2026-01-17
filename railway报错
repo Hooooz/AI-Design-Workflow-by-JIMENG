@@ -1,0 +1,694 @@
+2026-01-17T04:11:12.000000000Z [inf]  Starting Container
+2026-01-17T04:11:13.519691757Z [err]      return self.main(*args, **kwargs)
+2026-01-17T04:11:13.519702240Z [err]          ^^^^
+2026-01-17T04:11:13.519706349Z [err]             ~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:13.519717258Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1406, in main
+2026-01-17T04:11:13.519720062Z [err]      ...<45 lines>...
+2026-01-17T04:11:13.519726181Z [err]      rv = self.invoke(ctx)
+2026-01-17T04:11:13.519732866Z [err]          h11_max_incomplete_event_size=h11_max_incomplete_event_size,
+2026-01-17T04:11:13.519735601Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1269, in invoke
+2026-01-17T04:11:13.519744760Z [err]          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:13.519745180Z [err]      return ctx.invoke(self.callback, **ctx.params)
+2026-01-17T04:11:13.519753639Z [err]             ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:13.519755661Z [err]      )
+2026-01-17T04:11:13.519762256Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 824, in invoke
+2026-01-17T04:11:13.519772321Z [err]      return callback(*args, **kwargs)
+2026-01-17T04:11:13.519781183Z [err]      run(
+2026-01-17T04:11:13.519782339Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 412, in main
+2026-01-17T04:11:13.519791274Z [err]      ~~~^
+2026-01-17T04:11:13.519799042Z [err]          app,
+2026-01-17T04:11:13.519813844Z [err]      ^
+2026-01-17T04:11:13.520346154Z [err]  Traceback (most recent call last):
+2026-01-17T04:11:13.520350798Z [err]    File "/app/.venv/bin/uvicorn", line 7, in <module>
+2026-01-17T04:11:13.520354645Z [err]      sys.exit(main())
+2026-01-17T04:11:13.520358450Z [err]               ~~~~^^
+2026-01-17T04:11:13.520362735Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1485, in __call__
+2026-01-17T04:11:13.524555813Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 579, in run
+2026-01-17T04:11:13.524560703Z [err]      server.run()
+2026-01-17T04:11:13.524565534Z [err]      ~~~~~~~~~~^^
+2026-01-17T04:11:13.524569877Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 66, in run
+2026-01-17T04:11:13.524574688Z [err]      return asyncio.run(self.serve(sockets=sockets))
+2026-01-17T04:11:13.524579214Z [err]             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:13.524584206Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 195, in run
+2026-01-17T04:11:13.524589043Z [err]      return runner.run(main)
+2026-01-17T04:11:13.524593679Z [err]             ~~~~~~~~~~^^^^^^
+2026-01-17T04:11:13.524597954Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 118, in run
+2026-01-17T04:11:13.524602090Z [err]      return self._loop.run_until_complete(task)
+2026-01-17T04:11:13.524606141Z [err]             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-01-17T04:11:13.524611686Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+2026-01-17T04:11:13.524616391Z [err]      return future.result()
+2026-01-17T04:11:13.524620333Z [err]             ~~~~~~~~~~~~~^^
+2026-01-17T04:11:13.524624140Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 70, in serve
+2026-01-17T04:11:13.524628908Z [err]      await self._serve(sockets)
+2026-01-17T04:11:13.524634040Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 77, in _serve
+2026-01-17T04:11:13.524652804Z [err]      config.load()
+2026-01-17T04:11:13.524657650Z [err]      ~~~~~~~~~~~^^
+2026-01-17T04:11:13.524662468Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/config.py", line 435, in load
+2026-01-17T04:11:13.526516302Z [err]      self.loaded_app = import_from_string(self.app)
+2026-01-17T04:11:13.526523422Z [err]                        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-01-17T04:11:13.526531332Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+2026-01-17T04:11:13.526539339Z [err]      raise exc from None
+2026-01-17T04:11:13.526549968Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-01-17T04:11:13.526559063Z [err]      module = importlib.import_module(module_str)
+2026-01-17T04:11:13.526566002Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/importlib/__init__.py", line 88, in import_module
+2026-01-17T04:11:13.526572093Z [err]      return _bootstrap._gcd_import(name[level:], package, level)
+2026-01-17T04:11:13.526578747Z [err]             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:13.526585263Z [err]    File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+2026-01-17T04:11:13.526591775Z [err]    File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+2026-01-17T04:11:13.526599430Z [err]    File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+2026-01-17T04:11:13.526605977Z [err]    File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+2026-01-17T04:11:13.526611728Z [err]    File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+2026-01-17T04:11:13.526617634Z [err]    File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+2026-01-17T04:11:13.526623804Z [err]    File "/app/src/api.py", line 14, in <module>
+2026-01-17T04:11:13.526630006Z [err]      import md_parser
+2026-01-17T04:11:13.526635767Z [err]  ModuleNotFoundError: No module named 'md_parser'
+2026-01-17T04:11:15.504049202Z [err]  Traceback (most recent call last):
+2026-01-17T04:11:15.504053562Z [err]    File "/app/.venv/bin/uvicorn", line 7, in <module>
+2026-01-17T04:11:15.504058104Z [err]      sys.exit(main())
+2026-01-17T04:11:15.504062862Z [err]               ~~~~^^
+2026-01-17T04:11:15.504067192Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1485, in __call__
+2026-01-17T04:11:15.504072104Z [err]      return self.main(*args, **kwargs)
+2026-01-17T04:11:15.504076242Z [err]             ~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:15.504084081Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1406, in main
+2026-01-17T04:11:15.504088922Z [err]      rv = self.invoke(ctx)
+2026-01-17T04:11:15.504099645Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1269, in invoke
+2026-01-17T04:11:15.504104928Z [err]      return ctx.invoke(self.callback, **ctx.params)
+2026-01-17T04:11:15.504109788Z [err]             ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:15.504114212Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 824, in invoke
+2026-01-17T04:11:15.504119868Z [err]      return callback(*args, **kwargs)
+2026-01-17T04:11:15.504124436Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 412, in main
+2026-01-17T04:11:15.504129006Z [err]      run(
+2026-01-17T04:11:15.504135322Z [err]      ~~~^
+2026-01-17T04:11:15.504141134Z [err]          app,
+2026-01-17T04:11:15.504147659Z [err]          ^^^^
+2026-01-17T04:11:15.504154277Z [err]      ...<45 lines>...
+2026-01-17T04:11:15.504160719Z [err]          h11_max_incomplete_event_size=h11_max_incomplete_event_size,
+2026-01-17T04:11:15.504165767Z [err]          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:15.504170032Z [err]      )
+2026-01-17T04:11:15.504175245Z [err]      ^
+2026-01-17T04:11:15.505351850Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 579, in run
+2026-01-17T04:11:15.505356298Z [err]      server.run()
+2026-01-17T04:11:15.505360970Z [err]      ~~~~~~~~~~^^
+2026-01-17T04:11:15.505365780Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 66, in run
+2026-01-17T04:11:15.505370353Z [err]      return asyncio.run(self.serve(sockets=sockets))
+2026-01-17T04:11:15.505375548Z [err]             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:15.505381081Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 195, in run
+2026-01-17T04:11:15.505458367Z [err]      return runner.run(main)
+2026-01-17T04:11:15.505463540Z [err]             ~~~~~~~~~~^^^^^^
+2026-01-17T04:11:15.505469095Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 118, in run
+2026-01-17T04:11:15.505474834Z [err]      return self._loop.run_until_complete(task)
+2026-01-17T04:11:15.505480695Z [err]             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-01-17T04:11:15.505486658Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+2026-01-17T04:11:15.505493600Z [err]      return future.result()
+2026-01-17T04:11:15.505500969Z [err]             ~~~~~~~~~~~~~^^
+2026-01-17T04:11:15.505507924Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 70, in serve
+2026-01-17T04:11:15.505514561Z [err]      await self._serve(sockets)
+2026-01-17T04:11:15.505524877Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 77, in _serve
+2026-01-17T04:11:15.505532105Z [err]      config.load()
+2026-01-17T04:11:15.505539483Z [err]      ~~~~~~~~~~~^^
+2026-01-17T04:11:15.505547275Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/config.py", line 435, in load
+2026-01-17T04:11:15.508825832Z [err]    File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+2026-01-17T04:11:15.508842847Z [err]    File "/app/src/api.py", line 14, in <module>
+2026-01-17T04:11:15.508847583Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+2026-01-17T04:11:15.508851669Z [err]      import md_parser
+2026-01-17T04:11:15.508857572Z [err]      raise exc from None
+2026-01-17T04:11:15.508858843Z [err]  ModuleNotFoundError: No module named 'md_parser'
+2026-01-17T04:11:15.508864495Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-01-17T04:11:15.508869665Z [err]      module = importlib.import_module(module_str)
+2026-01-17T04:11:15.508874451Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/importlib/__init__.py", line 88, in import_module
+2026-01-17T04:11:15.508880771Z [err]      return _bootstrap._gcd_import(name[level:], package, level)
+2026-01-17T04:11:15.508885498Z [err]             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:15.508891271Z [err]    File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+2026-01-17T04:11:15.508895992Z [err]    File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+2026-01-17T04:11:15.508901147Z [err]    File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+2026-01-17T04:11:15.508905271Z [err]    File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+2026-01-17T04:11:15.508909823Z [err]    File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+2026-01-17T04:11:15.508977204Z [err]      self.loaded_app = import_from_string(self.app)
+2026-01-17T04:11:15.508983525Z [err]                        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-01-17T04:11:17.518379302Z [err]  Traceback (most recent call last):
+2026-01-17T04:11:17.518384621Z [err]    File "/app/.venv/bin/uvicorn", line 7, in <module>
+2026-01-17T04:11:17.518389680Z [err]      sys.exit(main())
+2026-01-17T04:11:17.518395870Z [err]               ~~~~^^
+2026-01-17T04:11:17.518401089Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1485, in __call__
+2026-01-17T04:11:17.518406199Z [err]      return self.main(*args, **kwargs)
+2026-01-17T04:11:17.518412775Z [err]             ~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:17.518418578Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1406, in main
+2026-01-17T04:11:17.518423681Z [err]      rv = self.invoke(ctx)
+2026-01-17T04:11:17.518429967Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1269, in invoke
+2026-01-17T04:11:17.518452395Z [err]      return ctx.invoke(self.callback, **ctx.params)
+2026-01-17T04:11:17.518456915Z [err]             ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:17.518462985Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 824, in invoke
+2026-01-17T04:11:17.518468394Z [err]      return callback(*args, **kwargs)
+2026-01-17T04:11:17.518473478Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 412, in main
+2026-01-17T04:11:17.518478027Z [err]      run(
+2026-01-17T04:11:17.518482140Z [err]      ~~~^
+2026-01-17T04:11:17.518486753Z [err]          app,
+2026-01-17T04:11:17.518491522Z [err]          ^^^^
+2026-01-17T04:11:17.518496623Z [err]      ...<45 lines>...
+2026-01-17T04:11:17.518502254Z [err]          h11_max_incomplete_event_size=h11_max_incomplete_event_size,
+2026-01-17T04:11:17.518507035Z [err]          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:17.518512201Z [err]      )
+2026-01-17T04:11:17.518516944Z [err]      ^
+2026-01-17T04:11:17.520770863Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 579, in run
+2026-01-17T04:11:17.520775856Z [err]      server.run()
+2026-01-17T04:11:17.520780829Z [err]      ~~~~~~~~~~^^
+2026-01-17T04:11:17.520787251Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 66, in run
+2026-01-17T04:11:17.520787881Z [err]  ModuleNotFoundError: No module named 'md_parser'
+2026-01-17T04:11:17.520792225Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/importlib/__init__.py", line 88, in import_module
+2026-01-17T04:11:17.520792876Z [err]      return asyncio.run(self.serve(sockets=sockets))
+2026-01-17T04:11:17.520798029Z [err]             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:17.520803561Z [err]      return _bootstrap._gcd_import(name[level:], package, level)
+2026-01-17T04:11:17.520806009Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 195, in run
+2026-01-17T04:11:17.520811142Z [err]      return runner.run(main)
+2026-01-17T04:11:17.520813641Z [err]             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:17.520817532Z [err]             ~~~~~~~~~~^^^^^^
+2026-01-17T04:11:17.520820299Z [err]    File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+2026-01-17T04:11:17.520823937Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 118, in run
+2026-01-17T04:11:17.520829387Z [err]      return self._loop.run_until_complete(task)
+2026-01-17T04:11:17.520829825Z [err]    File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+2026-01-17T04:11:17.520836359Z [err]             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-01-17T04:11:17.520838097Z [err]    File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+2026-01-17T04:11:17.520842449Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+2026-01-17T04:11:17.520846188Z [err]      self.loaded_app = import_from_string(self.app)
+2026-01-17T04:11:17.520847635Z [err]    File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+2026-01-17T04:11:17.520850533Z [err]      return future.result()
+2026-01-17T04:11:17.520855608Z [err]                        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-01-17T04:11:17.520855767Z [err]    File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+2026-01-17T04:11:17.520858572Z [err]             ~~~~~~~~~~~~~^^
+2026-01-17T04:11:17.520863328Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 70, in serve
+2026-01-17T04:11:17.520867973Z [err]    File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+2026-01-17T04:11:17.520869978Z [err]      await self._serve(sockets)
+2026-01-17T04:11:17.520870519Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+2026-01-17T04:11:17.520873438Z [err]    File "/app/src/api.py", line 14, in <module>
+2026-01-17T04:11:17.520878318Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 77, in _serve
+2026-01-17T04:11:17.520879276Z [err]      raise exc from None
+2026-01-17T04:11:17.520880210Z [err]      import md_parser
+2026-01-17T04:11:17.520883976Z [err]      config.load()
+2026-01-17T04:11:17.520888406Z [err]      ~~~~~~~~~~~^^
+2026-01-17T04:11:17.520893773Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/config.py", line 435, in load
+2026-01-17T04:11:17.520894245Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-01-17T04:11:17.520901882Z [err]      module = importlib.import_module(module_str)
+2026-01-17T04:11:19.530806653Z [err]  Traceback (most recent call last):
+2026-01-17T04:11:19.530813758Z [err]    File "/app/.venv/bin/uvicorn", line 7, in <module>
+2026-01-17T04:11:19.530820932Z [err]      sys.exit(main())
+2026-01-17T04:11:19.530825692Z [err]          ^^^^
+2026-01-17T04:11:19.530826558Z [err]               ~~~~^^
+2026-01-17T04:11:19.530838251Z [err]      ...<45 lines>...
+2026-01-17T04:11:19.530840063Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1485, in __call__
+2026-01-17T04:11:19.530847646Z [err]          h11_max_incomplete_event_size=h11_max_incomplete_event_size,
+2026-01-17T04:11:19.530847847Z [err]      return self.main(*args, **kwargs)
+2026-01-17T04:11:19.530855640Z [err]             ~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:19.530861797Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1406, in main
+2026-01-17T04:11:19.530865210Z [err]      return ctx.invoke(self.callback, **ctx.params)
+2026-01-17T04:11:19.530868209Z [err]      rv = self.invoke(ctx)
+2026-01-17T04:11:19.530874448Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1269, in invoke
+2026-01-17T04:11:19.530874906Z [err]             ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:19.530882173Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 824, in invoke
+2026-01-17T04:11:19.530892258Z [err]      return callback(*args, **kwargs)
+2026-01-17T04:11:19.530893282Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 412, in main
+2026-01-17T04:11:19.530895007Z [err]          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:19.530911135Z [err]      )
+2026-01-17T04:11:19.530918680Z [err]      run(
+2026-01-17T04:11:19.530922047Z [err]      ^
+2026-01-17T04:11:19.530927720Z [err]      ~~~^
+2026-01-17T04:11:19.530932256Z [err]          app,
+2026-01-17T04:11:19.533182007Z [err]      self.loaded_app = import_from_string(self.app)
+2026-01-17T04:11:19.533190068Z [err]                        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-01-17T04:11:19.533197227Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+2026-01-17T04:11:19.533204877Z [err]      raise exc from None
+2026-01-17T04:11:19.533211197Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-01-17T04:11:19.533217669Z [err]      module = importlib.import_module(module_str)
+2026-01-17T04:11:19.533223184Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/importlib/__init__.py", line 88, in import_module
+2026-01-17T04:11:19.533229023Z [err]      return _bootstrap._gcd_import(name[level:], package, level)
+2026-01-17T04:11:19.533234724Z [err]             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:19.533251923Z [err]    File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+2026-01-17T04:11:19.533258939Z [err]    File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+2026-01-17T04:11:19.533265466Z [err]    File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+2026-01-17T04:11:19.533271806Z [err]    File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+2026-01-17T04:11:19.533277126Z [err]    File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+2026-01-17T04:11:19.533282171Z [err]    File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+2026-01-17T04:11:19.533287290Z [err]    File "/app/src/api.py", line 14, in <module>
+2026-01-17T04:11:19.533292926Z [err]      import md_parser
+2026-01-17T04:11:19.533432865Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 579, in run
+2026-01-17T04:11:19.533439881Z [err]      server.run()
+2026-01-17T04:11:19.533446385Z [err]      ~~~~~~~~~~^^
+2026-01-17T04:11:19.533451700Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 66, in run
+2026-01-17T04:11:19.533456427Z [err]      return asyncio.run(self.serve(sockets=sockets))
+2026-01-17T04:11:19.533464497Z [err]             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:19.533468972Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 195, in run
+2026-01-17T04:11:19.533474361Z [err]      return runner.run(main)
+2026-01-17T04:11:19.533479181Z [err]             ~~~~~~~~~~^^^^^^
+2026-01-17T04:11:19.533483646Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 118, in run
+2026-01-17T04:11:19.533488023Z [err]      return self._loop.run_until_complete(task)
+2026-01-17T04:11:19.533493099Z [err]             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-01-17T04:11:19.533499958Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+2026-01-17T04:11:19.533505181Z [err]      return future.result()
+2026-01-17T04:11:19.533510035Z [err]             ~~~~~~~~~~~~~^^
+2026-01-17T04:11:19.533514866Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 70, in serve
+2026-01-17T04:11:19.533519120Z [err]      await self._serve(sockets)
+2026-01-17T04:11:19.533523929Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 77, in _serve
+2026-01-17T04:11:19.533529228Z [err]      config.load()
+2026-01-17T04:11:19.533534715Z [err]      ~~~~~~~~~~~^^
+2026-01-17T04:11:19.533540080Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/config.py", line 435, in load
+2026-01-17T04:11:19.533809413Z [err]  ModuleNotFoundError: No module named 'md_parser'
+2026-01-17T04:11:21.519194023Z [err]      ...<45 lines>...
+2026-01-17T04:11:21.519203083Z [err]          h11_max_incomplete_event_size=h11_max_incomplete_event_size,
+2026-01-17T04:11:21.519210348Z [err]          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:21.519212722Z [err]      rv = self.invoke(ctx)
+2026-01-17T04:11:21.519217599Z [err]      )
+2026-01-17T04:11:21.519226157Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1269, in invoke
+2026-01-17T04:11:21.519230889Z [err]      ~~~^
+2026-01-17T04:11:21.519237361Z [err]  Traceback (most recent call last):
+2026-01-17T04:11:21.519237556Z [err]      return callback(*args, **kwargs)
+2026-01-17T04:11:21.519240500Z [err]      return ctx.invoke(self.callback, **ctx.params)
+2026-01-17T04:11:21.519240508Z [err]    File "/app/.venv/bin/uvicorn", line 7, in <module>
+2026-01-17T04:11:21.519247426Z [err]          app,
+2026-01-17T04:11:21.519250747Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 412, in main
+2026-01-17T04:11:21.519252602Z [err]      sys.exit(main())
+2026-01-17T04:11:21.519253436Z [err]             ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:21.519265223Z [err]          ^^^^
+2026-01-17T04:11:21.519265376Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 824, in invoke
+2026-01-17T04:11:21.519265410Z [err]      run(
+2026-01-17T04:11:21.519265413Z [err]               ~~~~^^
+2026-01-17T04:11:21.519269470Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1485, in __call__
+2026-01-17T04:11:21.519278102Z [err]      return self.main(*args, **kwargs)
+2026-01-17T04:11:21.519286662Z [err]             ~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:21.519295045Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1406, in main
+2026-01-17T04:11:21.629704880Z [err]      ^
+2026-01-17T04:11:21.629844517Z [err]      config.load()
+2026-01-17T04:11:21.629859367Z [err]      ~~~~~~~~~~~^^
+2026-01-17T04:11:21.629867497Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/config.py", line 435, in load
+2026-01-17T04:11:21.630025239Z [err]      self.loaded_app = import_from_string(self.app)
+2026-01-17T04:11:21.630031856Z [err]                        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-01-17T04:11:21.630056092Z [err]    File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+2026-01-17T04:11:21.630063962Z [err]    File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+2026-01-17T04:11:21.630063993Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+2026-01-17T04:11:21.630070801Z [err]    File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+2026-01-17T04:11:21.630073181Z [err]      raise exc from None
+2026-01-17T04:11:21.630075661Z [err]  ModuleNotFoundError: No module named 'md_parser'
+2026-01-17T04:11:21.630080477Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-01-17T04:11:21.630087150Z [err]      module = importlib.import_module(module_str)
+2026-01-17T04:11:21.630091898Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/importlib/__init__.py", line 88, in import_module
+2026-01-17T04:11:21.630114555Z [err]    File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+2026-01-17T04:11:21.630118036Z [err]      return _bootstrap._gcd_import(name[level:], package, level)
+2026-01-17T04:11:21.630126982Z [err]    File "/app/src/api.py", line 14, in <module>
+2026-01-17T04:11:21.630131604Z [err]             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:21.630140153Z [err]      import md_parser
+2026-01-17T04:11:21.630140612Z [err]    File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+2026-01-17T04:11:21.630148216Z [err]    File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+2026-01-17T04:11:21.630354434Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 579, in run
+2026-01-17T04:11:21.630364246Z [err]      server.run()
+2026-01-17T04:11:21.630402542Z [err]      ~~~~~~~~~~^^
+2026-01-17T04:11:21.630413330Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 66, in run
+2026-01-17T04:11:21.630424751Z [err]      return asyncio.run(self.serve(sockets=sockets))
+2026-01-17T04:11:21.630431492Z [err]             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:21.630438787Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 195, in run
+2026-01-17T04:11:21.630446596Z [err]      return runner.run(main)
+2026-01-17T04:11:21.630453881Z [err]             ~~~~~~~~~~^^^^^^
+2026-01-17T04:11:21.630463490Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 118, in run
+2026-01-17T04:11:21.630474207Z [err]      return self._loop.run_until_complete(task)
+2026-01-17T04:11:21.630480845Z [err]             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-01-17T04:11:21.630488085Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+2026-01-17T04:11:21.630495160Z [err]      return future.result()
+2026-01-17T04:11:21.630504622Z [err]             ~~~~~~~~~~~~~^^
+2026-01-17T04:11:21.630512412Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 70, in serve
+2026-01-17T04:11:21.630520786Z [err]      await self._serve(sockets)
+2026-01-17T04:11:21.630527249Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 77, in _serve
+2026-01-17T04:11:23.499622262Z [err]  Traceback (most recent call last):
+2026-01-17T04:11:23.499626268Z [err]    File "/app/.venv/bin/uvicorn", line 7, in <module>
+2026-01-17T04:11:23.499630798Z [err]      sys.exit(main())
+2026-01-17T04:11:23.499634493Z [err]               ~~~~^^
+2026-01-17T04:11:23.499638127Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1485, in __call__
+2026-01-17T04:11:23.499642128Z [err]      return self.main(*args, **kwargs)
+2026-01-17T04:11:23.499648419Z [err]             ~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:23.499652713Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1406, in main
+2026-01-17T04:11:23.499657002Z [err]      rv = self.invoke(ctx)
+2026-01-17T04:11:23.499661096Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1269, in invoke
+2026-01-17T04:11:23.499665002Z [err]      return ctx.invoke(self.callback, **ctx.params)
+2026-01-17T04:11:23.499668929Z [err]             ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:23.499672879Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 824, in invoke
+2026-01-17T04:11:23.499676914Z [err]      return callback(*args, **kwargs)
+2026-01-17T04:11:23.499681523Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 412, in main
+2026-01-17T04:11:23.499685905Z [err]      run(
+2026-01-17T04:11:23.499690549Z [err]      ~~~^
+2026-01-17T04:11:23.499694998Z [err]          app,
+2026-01-17T04:11:23.499699044Z [err]          ^^^^
+2026-01-17T04:11:23.499710534Z [err]      ...<45 lines>...
+2026-01-17T04:11:23.499714570Z [err]          h11_max_incomplete_event_size=h11_max_incomplete_event_size,
+2026-01-17T04:11:23.499721676Z [err]          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:23.499725770Z [err]      )
+2026-01-17T04:11:23.499729874Z [err]      ^
+2026-01-17T04:11:23.501239406Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 579, in run
+2026-01-17T04:11:23.501245401Z [err]      server.run()
+2026-01-17T04:11:23.501253738Z [err]      ~~~~~~~~~~^^
+2026-01-17T04:11:23.501258018Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 66, in run
+2026-01-17T04:11:23.501262749Z [err]      return asyncio.run(self.serve(sockets=sockets))
+2026-01-17T04:11:23.501268782Z [err]             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:23.501273853Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 195, in run
+2026-01-17T04:11:23.501277663Z [err]      return runner.run(main)
+2026-01-17T04:11:23.501282123Z [err]             ~~~~~~~~~~^^^^^^
+2026-01-17T04:11:23.501288145Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 118, in run
+2026-01-17T04:11:23.501293312Z [err]      return self._loop.run_until_complete(task)
+2026-01-17T04:11:23.501297918Z [err]             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-01-17T04:11:23.501303173Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+2026-01-17T04:11:23.501308990Z [err]      return future.result()
+2026-01-17T04:11:23.501314450Z [err]             ~~~~~~~~~~~~~^^
+2026-01-17T04:11:23.501318634Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 70, in serve
+2026-01-17T04:11:23.501323175Z [err]      await self._serve(sockets)
+2026-01-17T04:11:23.501328064Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 77, in _serve
+2026-01-17T04:11:23.501333739Z [err]      config.load()
+2026-01-17T04:11:23.501339767Z [err]      ~~~~~~~~~~~^^
+2026-01-17T04:11:23.501345850Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/config.py", line 435, in load
+2026-01-17T04:11:23.502451090Z [err]      self.loaded_app = import_from_string(self.app)
+2026-01-17T04:11:23.502459483Z [err]                        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-01-17T04:11:23.502466735Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+2026-01-17T04:11:23.502473898Z [err]      raise exc from None
+2026-01-17T04:11:23.502481038Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-01-17T04:11:23.502487687Z [err]      module = importlib.import_module(module_str)
+2026-01-17T04:11:23.502495287Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/importlib/__init__.py", line 88, in import_module
+2026-01-17T04:11:23.502502315Z [err]      return _bootstrap._gcd_import(name[level:], package, level)
+2026-01-17T04:11:23.502509118Z [err]             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:23.502517766Z [err]    File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+2026-01-17T04:11:23.502523819Z [err]    File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+2026-01-17T04:11:23.502530369Z [err]    File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+2026-01-17T04:11:23.502538071Z [err]    File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+2026-01-17T04:11:23.502544930Z [err]    File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+2026-01-17T04:11:23.502552885Z [err]    File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+2026-01-17T04:11:23.502559924Z [err]    File "/app/src/api.py", line 14, in <module>
+2026-01-17T04:11:23.502567915Z [err]      import md_parser
+2026-01-17T04:11:23.502578500Z [err]  ModuleNotFoundError: No module named 'md_parser'
+2026-01-17T04:11:25.470095279Z [err]  Traceback (most recent call last):
+2026-01-17T04:11:25.470100537Z [err]    File "/app/.venv/bin/uvicorn", line 7, in <module>
+2026-01-17T04:11:25.470107270Z [err]      sys.exit(main())
+2026-01-17T04:11:25.470113060Z [err]               ~~~~^^
+2026-01-17T04:11:25.470118394Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1485, in __call__
+2026-01-17T04:11:25.470124338Z [err]      return self.main(*args, **kwargs)
+2026-01-17T04:11:25.470129962Z [err]             ~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:25.470135478Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1406, in main
+2026-01-17T04:11:25.470142045Z [err]      rv = self.invoke(ctx)
+2026-01-17T04:11:25.470147682Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1269, in invoke
+2026-01-17T04:11:25.470153730Z [err]      return ctx.invoke(self.callback, **ctx.params)
+2026-01-17T04:11:25.470159182Z [err]             ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:25.470165217Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 824, in invoke
+2026-01-17T04:11:25.470171681Z [err]      return callback(*args, **kwargs)
+2026-01-17T04:11:25.470177618Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 412, in main
+2026-01-17T04:11:25.470183470Z [err]      run(
+2026-01-17T04:11:25.470189437Z [err]      ~~~^
+2026-01-17T04:11:25.470195193Z [err]          app,
+2026-01-17T04:11:25.470201879Z [err]          ^^^^
+2026-01-17T04:11:25.470207600Z [err]      ...<45 lines>...
+2026-01-17T04:11:25.470215456Z [err]          h11_max_incomplete_event_size=h11_max_incomplete_event_size,
+2026-01-17T04:11:25.470221460Z [err]          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:25.470227184Z [err]      )
+2026-01-17T04:11:25.470232591Z [err]      ^
+2026-01-17T04:11:25.472032570Z [err]      ~~~~~~~~~~~^^
+2026-01-17T04:11:25.472037278Z [err]      ~~~~~~~~~~^^
+2026-01-17T04:11:25.472039998Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/config.py", line 435, in load
+2026-01-17T04:11:25.472044258Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 66, in run
+2026-01-17T04:11:25.472050339Z [err]      return asyncio.run(self.serve(sockets=sockets))
+2026-01-17T04:11:25.472056717Z [err]             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:25.472062385Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 195, in run
+2026-01-17T04:11:25.472068928Z [err]      return runner.run(main)
+2026-01-17T04:11:25.472074547Z [err]             ~~~~~~~~~~^^^^^^
+2026-01-17T04:11:25.472081467Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 118, in run
+2026-01-17T04:11:25.472083271Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 579, in run
+2026-01-17T04:11:25.472085091Z [err]      return self._loop.run_until_complete(task)
+2026-01-17T04:11:25.472091193Z [err]      server.run()
+2026-01-17T04:11:25.472094664Z [err]             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-01-17T04:11:25.472095024Z [err]      await self._serve(sockets)
+2026-01-17T04:11:25.472104156Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+2026-01-17T04:11:25.472107370Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 77, in _serve
+2026-01-17T04:11:25.472110845Z [err]      return future.result()
+2026-01-17T04:11:25.472114065Z [err]      config.load()
+2026-01-17T04:11:25.472116732Z [err]             ~~~~~~~~~~~~~^^
+2026-01-17T04:11:25.472121904Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 70, in serve
+2026-01-17T04:11:25.472940379Z [err]      self.loaded_app = import_from_string(self.app)
+2026-01-17T04:11:25.472944051Z [err]                        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-01-17T04:11:25.472949156Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+2026-01-17T04:11:25.472953993Z [err]      raise exc from None
+2026-01-17T04:11:25.472963309Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-01-17T04:11:25.472968232Z [err]      module = importlib.import_module(module_str)
+2026-01-17T04:11:25.472976623Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/importlib/__init__.py", line 88, in import_module
+2026-01-17T04:11:25.472980376Z [err]      return _bootstrap._gcd_import(name[level:], package, level)
+2026-01-17T04:11:25.472983940Z [err]             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:25.472987822Z [err]    File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+2026-01-17T04:11:25.472991390Z [err]    File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+2026-01-17T04:11:25.472995661Z [err]    File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+2026-01-17T04:11:25.472999726Z [err]    File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+2026-01-17T04:11:25.473003479Z [err]    File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+2026-01-17T04:11:25.473007349Z [err]    File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+2026-01-17T04:11:25.473011369Z [err]    File "/app/src/api.py", line 14, in <module>
+2026-01-17T04:11:25.473015450Z [err]      import md_parser
+2026-01-17T04:11:25.473019757Z [err]  ModuleNotFoundError: No module named 'md_parser'
+2026-01-17T04:11:27.455912498Z [err]  Traceback (most recent call last):
+2026-01-17T04:11:27.455923473Z [err]    File "/app/.venv/bin/uvicorn", line 7, in <module>
+2026-01-17T04:11:27.455925026Z [err]          ^^^^
+2026-01-17T04:11:27.455932510Z [err]      sys.exit(main())
+2026-01-17T04:11:27.455937219Z [err]      ...<45 lines>...
+2026-01-17T04:11:27.455939163Z [err]               ~~~~^^
+2026-01-17T04:11:27.455945538Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1485, in __call__
+2026-01-17T04:11:27.455947398Z [err]          h11_max_incomplete_event_size=h11_max_incomplete_event_size,
+2026-01-17T04:11:27.455952047Z [err]      return self.main(*args, **kwargs)
+2026-01-17T04:11:27.455956257Z [err]          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:27.455958154Z [err]             ~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:27.455963748Z [err]      )
+2026-01-17T04:11:27.455990971Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 824, in invoke
+2026-01-17T04:11:27.456002055Z [err]      return callback(*args, **kwargs)
+2026-01-17T04:11:27.456003209Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1406, in main
+2026-01-17T04:11:27.456009739Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 412, in main
+2026-01-17T04:11:27.456017752Z [err]      run(
+2026-01-17T04:11:27.456018300Z [err]      rv = self.invoke(ctx)
+2026-01-17T04:11:27.456028284Z [err]      ~~~^
+2026-01-17T04:11:27.456028681Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1269, in invoke
+2026-01-17T04:11:27.456035745Z [err]          app,
+2026-01-17T04:11:27.456038621Z [err]      return ctx.invoke(self.callback, **ctx.params)
+2026-01-17T04:11:27.456045920Z [err]             ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:27.457210763Z [err]      ^
+2026-01-17T04:11:27.457533069Z [err]  ModuleNotFoundError: No module named 'md_parser'
+2026-01-17T04:11:27.457652822Z [err]      self.loaded_app = import_from_string(self.app)
+2026-01-17T04:11:27.457657787Z [err]                        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-01-17T04:11:27.457661911Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+2026-01-17T04:11:27.457666479Z [err]      raise exc from None
+2026-01-17T04:11:27.457670787Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-01-17T04:11:27.457675116Z [err]      module = importlib.import_module(module_str)
+2026-01-17T04:11:27.457679373Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/importlib/__init__.py", line 88, in import_module
+2026-01-17T04:11:27.457683843Z [err]      return _bootstrap._gcd_import(name[level:], package, level)
+2026-01-17T04:11:27.457688593Z [err]             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:27.457693297Z [err]    File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+2026-01-17T04:11:27.457697731Z [err]    File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+2026-01-17T04:11:27.457702353Z [err]    File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+2026-01-17T04:11:27.457706271Z [err]    File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+2026-01-17T04:11:27.457711068Z [err]    File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+2026-01-17T04:11:27.457715285Z [err]    File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+2026-01-17T04:11:27.457719215Z [err]    File "/app/src/api.py", line 14, in <module>
+2026-01-17T04:11:27.457723492Z [err]      import md_parser
+2026-01-17T04:11:27.457741316Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 579, in run
+2026-01-17T04:11:27.457746135Z [err]      server.run()
+2026-01-17T04:11:27.457750590Z [err]      ~~~~~~~~~~^^
+2026-01-17T04:11:27.457755245Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 66, in run
+2026-01-17T04:11:27.457759695Z [err]      return asyncio.run(self.serve(sockets=sockets))
+2026-01-17T04:11:27.457765046Z [err]             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:27.457769904Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 195, in run
+2026-01-17T04:11:27.457774742Z [err]      return runner.run(main)
+2026-01-17T04:11:27.457779891Z [err]             ~~~~~~~~~~^^^^^^
+2026-01-17T04:11:27.457785150Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 118, in run
+2026-01-17T04:11:27.457790472Z [err]      return self._loop.run_until_complete(task)
+2026-01-17T04:11:27.457795251Z [err]             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-01-17T04:11:27.457799612Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+2026-01-17T04:11:27.457803753Z [err]      return future.result()
+2026-01-17T04:11:27.457808551Z [err]             ~~~~~~~~~~~~~^^
+2026-01-17T04:11:27.457813138Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 70, in serve
+2026-01-17T04:11:27.457818163Z [err]      await self._serve(sockets)
+2026-01-17T04:11:27.457823599Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 77, in _serve
+2026-01-17T04:11:27.457828099Z [err]      config.load()
+2026-01-17T04:11:27.457832314Z [err]      ~~~~~~~~~~~^^
+2026-01-17T04:11:27.457836698Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/config.py", line 435, in load
+2026-01-17T04:11:29.478388972Z [err]  Traceback (most recent call last):
+2026-01-17T04:11:29.478393282Z [err]    File "/app/.venv/bin/uvicorn", line 7, in <module>
+2026-01-17T04:11:29.478398323Z [err]      sys.exit(main())
+2026-01-17T04:11:29.478402518Z [err]               ~~~~^^
+2026-01-17T04:11:29.478406963Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1485, in __call__
+2026-01-17T04:11:29.478412126Z [err]      return self.main(*args, **kwargs)
+2026-01-17T04:11:29.478416542Z [err]             ~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:29.478421122Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1406, in main
+2026-01-17T04:11:29.478425485Z [err]      rv = self.invoke(ctx)
+2026-01-17T04:11:29.478432312Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1269, in invoke
+2026-01-17T04:11:29.478436631Z [err]      return ctx.invoke(self.callback, **ctx.params)
+2026-01-17T04:11:29.478440743Z [err]             ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:29.478445040Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 824, in invoke
+2026-01-17T04:11:29.478449710Z [err]      return callback(*args, **kwargs)
+2026-01-17T04:11:29.478454929Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 412, in main
+2026-01-17T04:11:29.478459813Z [err]      run(
+2026-01-17T04:11:29.478464668Z [err]      ~~~^
+2026-01-17T04:11:29.478471092Z [err]          app,
+2026-01-17T04:11:29.478475436Z [err]      await self._serve(sockets)
+2026-01-17T04:11:29.478480460Z [err]          ^^^^
+2026-01-17T04:11:29.478486257Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 77, in _serve
+2026-01-17T04:11:29.478488059Z [err]      return runner.run(main)
+2026-01-17T04:11:29.478491586Z [err]      ...<45 lines>...
+2026-01-17T04:11:29.478498338Z [err]      config.load()
+2026-01-17T04:11:29.478502148Z [err]          h11_max_incomplete_event_size=h11_max_incomplete_event_size,
+2026-01-17T04:11:29.478504446Z [err]             ~~~~~~~~~~^^^^^^
+2026-01-17T04:11:29.478511247Z [err]      ~~~~~~~~~~~^^
+2026-01-17T04:11:29.478513346Z [err]          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:29.478513807Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 579, in run
+2026-01-17T04:11:29.478517487Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 118, in run
+2026-01-17T04:11:29.478527046Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/config.py", line 435, in load
+2026-01-17T04:11:29.478528573Z [err]      return self._loop.run_until_complete(task)
+2026-01-17T04:11:29.478528653Z [err]      )
+2026-01-17T04:11:29.478529328Z [err]      server.run()
+2026-01-17T04:11:29.478536815Z [err]      ^
+2026-01-17T04:11:29.478540212Z [err]      ~~~~~~~~~~^^
+2026-01-17T04:11:29.478542041Z [err]             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-01-17T04:11:29.478550380Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 66, in run
+2026-01-17T04:11:29.478550641Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+2026-01-17T04:11:29.478559911Z [err]      return future.result()
+2026-01-17T04:11:29.478561409Z [err]      return asyncio.run(self.serve(sockets=sockets))
+2026-01-17T04:11:29.478568043Z [err]             ~~~~~~~~~~~~~^^
+2026-01-17T04:11:29.478571110Z [err]             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:29.478575687Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 70, in serve
+2026-01-17T04:11:29.478580473Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 195, in run
+2026-01-17T04:11:29.480407659Z [err]      self.loaded_app = import_from_string(self.app)
+2026-01-17T04:11:29.480414341Z [err]                        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-01-17T04:11:29.480420474Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+2026-01-17T04:11:29.480426920Z [err]      raise exc from None
+2026-01-17T04:11:29.480433542Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-01-17T04:11:29.480439301Z [err]      module = importlib.import_module(module_str)
+2026-01-17T04:11:29.480444680Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/importlib/__init__.py", line 88, in import_module
+2026-01-17T04:11:29.480449866Z [err]      return _bootstrap._gcd_import(name[level:], package, level)
+2026-01-17T04:11:29.480455971Z [err]             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:29.480462262Z [err]    File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+2026-01-17T04:11:29.480468623Z [err]    File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+2026-01-17T04:11:29.480474687Z [err]    File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+2026-01-17T04:11:29.480480923Z [err]    File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+2026-01-17T04:11:29.480487579Z [err]    File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+2026-01-17T04:11:29.480493865Z [err]    File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+2026-01-17T04:11:29.480501054Z [err]    File "/app/src/api.py", line 14, in <module>
+2026-01-17T04:11:29.480508732Z [err]      import md_parser
+2026-01-17T04:11:29.480517206Z [err]  ModuleNotFoundError: No module named 'md_parser'
+2026-01-17T04:11:31.504206041Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1485, in __call__
+2026-01-17T04:11:31.504211936Z [err]      return self.main(*args, **kwargs)
+2026-01-17T04:11:31.504217207Z [err]             ~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:31.504224038Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1406, in main
+2026-01-17T04:11:31.504228982Z [err]      rv = self.invoke(ctx)
+2026-01-17T04:11:31.504234575Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1269, in invoke
+2026-01-17T04:11:31.504239470Z [err]      return ctx.invoke(self.callback, **ctx.params)
+2026-01-17T04:11:31.504245056Z [err]  Traceback (most recent call last):
+2026-01-17T04:11:31.504252121Z [err]    File "/app/.venv/bin/uvicorn", line 7, in <module>
+2026-01-17T04:11:31.504260511Z [err]      sys.exit(main())
+2026-01-17T04:11:31.504267544Z [err]               ~~~~^^
+2026-01-17T04:11:31.504273449Z [err]             ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:31.504281356Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 824, in invoke
+2026-01-17T04:11:31.504285724Z [err]      return callback(*args, **kwargs)
+2026-01-17T04:11:31.505280276Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 412, in main
+2026-01-17T04:11:31.505288899Z [err]      run(
+2026-01-17T04:11:31.505298861Z [err]      ~~~^
+2026-01-17T04:11:31.505309316Z [err]          app,
+2026-01-17T04:11:31.505314311Z [err]          ^^^^
+2026-01-17T04:11:31.505319133Z [err]      ...<45 lines>...
+2026-01-17T04:11:31.505405594Z [err]          h11_max_incomplete_event_size=h11_max_incomplete_event_size,
+2026-01-17T04:11:31.505412248Z [err]          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:31.505418272Z [err]      )
+2026-01-17T04:11:31.505424682Z [err]      ^
+2026-01-17T04:11:31.505426636Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 195, in run
+2026-01-17T04:11:31.505434670Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+2026-01-17T04:11:31.505439472Z [err]      return runner.run(main)
+2026-01-17T04:11:31.505440905Z [err]      return future.result()
+2026-01-17T04:11:31.505448460Z [err]             ~~~~~~~~~~~~~^^
+2026-01-17T04:11:31.505452034Z [err]             ~~~~~~~~~~^^^^^^
+2026-01-17T04:11:31.505455085Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 70, in serve
+2026-01-17T04:11:31.505461054Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 579, in run
+2026-01-17T04:11:31.505464263Z [err]      return self._loop.run_until_complete(task)
+2026-01-17T04:11:31.505468471Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 118, in run
+2026-01-17T04:11:31.505469809Z [err]             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-01-17T04:11:31.505470785Z [err]      server.run()
+2026-01-17T04:11:31.505489579Z [err]      await self._serve(sockets)
+2026-01-17T04:11:31.505490596Z [err]      ~~~~~~~~~~~^^
+2026-01-17T04:11:31.505496076Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 77, in _serve
+2026-01-17T04:11:31.505497448Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/config.py", line 435, in load
+2026-01-17T04:11:31.505501563Z [err]      config.load()
+2026-01-17T04:11:31.505508588Z [err]      ~~~~~~~~~~^^
+2026-01-17T04:11:31.505522393Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 66, in run
+2026-01-17T04:11:31.505530106Z [err]      return asyncio.run(self.serve(sockets=sockets))
+2026-01-17T04:11:31.505538096Z [err]             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:31.505600837Z [err]    File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+2026-01-17T04:11:31.505600934Z [err]      import md_parser
+2026-01-17T04:11:31.505601101Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-01-17T04:11:31.505606497Z [err]    File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+2026-01-17T04:11:31.505612949Z [err]  ModuleNotFoundError: No module named 'md_parser'
+2026-01-17T04:11:31.505613784Z [err]    File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+2026-01-17T04:11:31.505613949Z [err]      module = importlib.import_module(module_str)
+2026-01-17T04:11:31.505619672Z [err]    File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+2026-01-17T04:11:31.505623275Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/importlib/__init__.py", line 88, in import_module
+2026-01-17T04:11:31.505627122Z [err]      return _bootstrap._gcd_import(name[level:], package, level)
+2026-01-17T04:11:31.505631381Z [err]    File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+2026-01-17T04:11:31.505635486Z [err]      self.loaded_app = import_from_string(self.app)
+2026-01-17T04:11:31.505638105Z [err]             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:31.505640411Z [err]    File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+2026-01-17T04:11:31.505645663Z [err]                        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-01-17T04:11:31.505648291Z [err]    File "/app/src/api.py", line 14, in <module>
+2026-01-17T04:11:31.505653010Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+2026-01-17T04:11:31.505659625Z [err]      raise exc from None
+2026-01-17T04:11:32.976072820Z [err]  Traceback (most recent call last):
+2026-01-17T04:11:32.978663773Z [err]    File "/app/.venv/bin/uvicorn", line 7, in <module>
+2026-01-17T04:11:32.978670233Z [err]      sys.exit(main())
+2026-01-17T04:11:32.978679179Z [err]               ~~~~^^
+2026-01-17T04:11:32.978689963Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1485, in __call__
+2026-01-17T04:11:32.978699398Z [err]      return self.main(*args, **kwargs)
+2026-01-17T04:11:32.978706742Z [err]      ~~~^
+2026-01-17T04:11:32.978708029Z [err]             ~~~~~~~~~^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:32.978715551Z [err]          h11_max_incomplete_event_size=h11_max_incomplete_event_size,
+2026-01-17T04:11:32.978716000Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1406, in main
+2026-01-17T04:11:32.978718269Z [err]          app,
+2026-01-17T04:11:32.978723350Z [err]      rv = self.invoke(ctx)
+2026-01-17T04:11:32.978724167Z [err]          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:32.978727025Z [err]          ^^^^
+2026-01-17T04:11:32.978732776Z [err]      )
+2026-01-17T04:11:32.978736722Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 1269, in invoke
+2026-01-17T04:11:32.978738297Z [err]      ...<45 lines>...
+2026-01-17T04:11:32.978741861Z [err]      ^
+2026-01-17T04:11:32.978744700Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 579, in run
+2026-01-17T04:11:32.978748890Z [err]      return ctx.invoke(self.callback, **ctx.params)
+2026-01-17T04:11:32.978752523Z [err]    File "/app/.venv/lib/python3.13/site-packages/click/core.py", line 824, in invoke
+2026-01-17T04:11:32.978756452Z [err]             ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:32.978769025Z [err]      return callback(*args, **kwargs)
+2026-01-17T04:11:32.978778143Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/main.py", line 412, in main
+2026-01-17T04:11:32.978794232Z [err]      run(
+2026-01-17T04:11:32.979714888Z [err]      server.run()
+2026-01-17T04:11:32.979727320Z [err]      ~~~~~~~~~~^^
+2026-01-17T04:11:32.979735580Z [err]      await self._serve(sockets)
+2026-01-17T04:11:32.979737540Z [err]             ~~~~~~~~~~^^^^^^
+2026-01-17T04:11:32.979738639Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 66, in run
+2026-01-17T04:11:32.979749301Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 118, in run
+2026-01-17T04:11:32.979750046Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 77, in _serve
+2026-01-17T04:11:32.979753468Z [err]      return asyncio.run(self.serve(sockets=sockets))
+2026-01-17T04:11:32.979762585Z [err]      config.load()
+2026-01-17T04:11:32.979765802Z [err]             ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:32.979766063Z [err]      return self._loop.run_until_complete(task)
+2026-01-17T04:11:32.979773423Z [err]      ~~~~~~~~~~~^^
+2026-01-17T04:11:32.979777332Z [err]             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+2026-01-17T04:11:32.979784864Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/config.py", line 435, in load
+2026-01-17T04:11:32.979785261Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/runners.py", line 195, in run
+2026-01-17T04:11:32.979796845Z [err]      return runner.run(main)
+2026-01-17T04:11:32.979801767Z [err]      self.loaded_app = import_from_string(self.app)
+2026-01-17T04:11:32.979805422Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+2026-01-17T04:11:32.979811731Z [err]      return future.result()
+2026-01-17T04:11:32.979811856Z [err]                        ~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+2026-01-17T04:11:32.979816384Z [err]             ~~~~~~~~~~~~~^^
+2026-01-17T04:11:32.979820368Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/server.py", line 70, in serve
+2026-01-17T04:11:32.980878077Z [err]    File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+2026-01-17T04:11:32.980882720Z [err]    File "/app/src/api.py", line 14, in <module>
+2026-01-17T04:11:32.980888527Z [err]    File "/mise/installs/python/3.13.11/lib/python3.13/importlib/__init__.py", line 88, in import_module
+2026-01-17T04:11:32.980893133Z [err]      import md_parser
+2026-01-17T04:11:32.980895475Z [err]      return _bootstrap._gcd_import(name[level:], package, level)
+2026-01-17T04:11:32.980899220Z [err]  ModuleNotFoundError: No module named 'md_parser'
+2026-01-17T04:11:32.980903336Z [err]             ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-01-17T04:11:32.980907539Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 22, in import_from_string
+2026-01-17T04:11:32.980908198Z [err]    File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+2026-01-17T04:11:32.980912527Z [err]    File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+2026-01-17T04:11:32.980917456Z [err]    File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+2026-01-17T04:11:32.980920086Z [err]      raise exc from None
+2026-01-17T04:11:32.980923102Z [err]    File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+2026-01-17T04:11:32.980927803Z [err]    File "<frozen importlib._bootstrap_external>", line 1023, in exec_module
+2026-01-17T04:11:32.980933623Z [err]    File "/app/.venv/lib/python3.13/site-packages/uvicorn/importer.py", line 19, in import_from_string
+2026-01-17T04:11:32.980940698Z [err]      module = importlib.import_module(module_str)

@@ -7,7 +7,7 @@ try:
 except ImportError:
     OpenAI = None
 
-import config
+from src import config
 
 class LLMService:
     def __init__(self, api_key=None, base_url=None):
