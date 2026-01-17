@@ -6,10 +6,14 @@ import json
 import concurrent.futures
 from datetime import datetime
 from typing import Dict, Any, Tuple, List
-from src.llm_wrapper import LLMService
-from src.image_gen import ImageGenService
-from src import config
-from src import md_parser
+
+# Add current directory to path for imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from llm_wrapper import LLMService
+from image_gen import ImageGenService
+import config
+import md_parser
 
 class DesignWorkflow:
     def __init__(self, output_dir=None, custom_config=None):

@@ -1,13 +1,17 @@
 import os
+import sys
 import time
 from typing import List, Dict, Any
+
+# Add current directory to path for imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
     from openai import OpenAI
 except ImportError:
     OpenAI = None
 
-from src import config
+import config
 
 class LLMService:
     def __init__(self, api_key=None, base_url=None):

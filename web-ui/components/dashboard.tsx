@@ -29,7 +29,7 @@ interface DashboardProps {
 const STEPS = [
   { id: "market_analysis", label: "市场分析", icon: TrendingUp },
   { id: "visual_research", label: "视觉调研", icon: Palette },
-  { id: "design_proposals", label: "设计提案", icon: Sparkles },
+  { id: "design_generation", label: "设计提案", icon: Sparkles },
   { id: "image_generation", label: "创意图库", icon: ImageIcon },
   { id: "full_report", label: "完整报告", icon: FileText },
 ]
@@ -248,7 +248,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
         const steps = [
           { id: "market_analysis", progress: 30 },
           { id: "visual_research", progress: 50 },
-          { id: "design_proposals", progress: 70 },
+          { id: "design_generation", progress: 70 },
           { id: "image_generation", progress: 90 },
           { id: "full_report", progress: 100 }
         ]
