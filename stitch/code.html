@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>DesignCore AI Workflow Prototype</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    
+    <style type="text/tailwindcss">
+        @layer base {
+            :root {
+                --primary: #1e293b;
+                --primary-dark: #0f172a;
+            }
+            body {
+                @apply font-sans;
+            }
+        }
+        
+        .font-display { font-family: 'Space Grotesk', sans-serif; }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            @apply bg-slate-300 dark:bg-slate-700 rounded-full;
+        }
+        
+        @keyframes spinner-slow {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .animate-spinner {
+            animation: spinner-slow 2s linear infinite;
+        }
+        
+        .skeleton-overlay {
+            position: relative;
+            overflow: hidden;
+        }
+        .skeleton-overlay::after {
+            content: "";
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1e293b",
+                        "primary-hover": "#0f172a",
+                    },
+                    fontFamily: {
+                        display: ["Space Grotesk", "sans-serif"],
+                        sans: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        'md': '0.375rem',
+                        'xl': '0.75rem',
+                        '2xl': '1rem',
+                    }
+                },
+            },
+        };
+    </script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans h-screen overflow-hidden">
+    <div id="root"></div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/history@5/umd/history.development.js"></script>
+    <script src="https://unpkg.com/react-router@6.3.0/umd/react-router.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom@6.3.0/umd/react-router-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+        const { MemoryRouter, Routes, Route, Link, useNavigate, useLocation } = ReactRouterDOM;
+
+        // --- Shared Components ---
+
+        const Sidebar = () => {
+            const location = useLocation();
+            const isActive = (path) => location.pathname === path;
+
+            return (
+                <aside class="w-64 flex-shrink-0 border-r border-slate-200 flex flex-col bg-white">
+                    <div class="p-6 flex items-center space-x-3">
+                        <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl font-display">D</div>
+                        <h1 class="font-display font-bold text-lg tracking-tight text-slate-900">DesignCore</h1>
+                    </div>
+                    <div class="px-4 mb-4">
+                        <Link to="/" class="w-full flex items-center justify-center space-x-2 py-2.5 px-4 bg-primary hover:bg-primary-hover text-white rounded-md transition-all shadow-sm font-medium">
+                            <span class="material-symbols-outlined text-sm">add</span>
+                            <span>New Project</span>
+                        </Link>
+                    </div>
+                    <nav class="flex-1 px-4 py-4 overflow-y-auto custom-scrollbar">
+                        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4 px-2">Recent Projects</div>
+                        <div class="space-y-1">
+                            <Link to="/results" class={`flex items-center space-x-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${isActive('/results') ? 'text-slate-900 bg-slate-100' : 'text-slate-600 hover:bg-slate-50'}`}>
+                                <span class="material-symbols-outlined text-lg">folder_open</span>
+                                <span class="truncate">Polaroid Camera Bag</span>
+                            </Link>
+                            <a class="flex items-center space-x-3 px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md" href="#">
+                                <span class="material-symbols-outlined text-lg">folder</span>
+                                <span class="truncate">Minimalist Desk Lamp</span>
+                            </a>
+                            <a class="flex items-center space-x-3 px-3 py-2 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-md" href="#">
+                                <span class="material-symbols-outlined text-lg">folder</span>
+                                <span class="truncate">Smart Watch Concept</span>
+                            </a>
+                        </div>
+                    </nav>
+                    <div class="p-4 border-t border-slate-100 dark:border-slate-800">
+                        <button class="flex items-center space-x-3 px-3 py-2 w-full text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold">JD</div>
+                            <span class="flex-1 text-left">Settings</span>
+                            <span class="material-symbols-outlined text-lg">settings</span>
+                        </button>
+                    </div>
+                </aside>
+            );
+        };
+
+        const Footer = ({ statusText = "Ready" }) => (
+            <footer class="h-14 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 text-slate-500 dark:text-slate-400 text-xs flex-shrink-0">
+                <div class="flex items-center space-x-6">
+                    <span class="flex items-center space-x-1">
+                        <span class="material-symbols-outlined text-sm">info</span>
+                        <span>{statusText}</span>
+                    </span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="hover:text-primary transition-colors uppercase font-bold tracking-tighter">Documentation</button>
+                    <button class="hover:text-primary transition-colors uppercase font-bold tracking-tighter">Support</button>
+                </div>
+            </footer>
+        );
+
+        // --- Screen 1: Home/Initial ---
+        const HomePage = () => {
+            const navigate = useNavigate();
+            const [projectName, setProjectName] = useState("");
+            
+            const handleRun = () => {
+                navigate("/loading");
+            };
+
+            return (
+                <div class="flex h-screen overflow-hidden">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-950 relative">
+                        <header class="h-16 flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between px-8">
+                            <div class="flex items-center space-x-2">
+                                <span class="material-symbols-outlined text-slate-400">auto_fix_high</span>
+                                <h2 class="text-lg font-display font-bold text-slate-800 dark:text-white">Design Workflow</h2>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center space-x-2 text-sm text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+                                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                    <span>System Ready</span>
+                                </div>
+                            </div>
+                        </header>
+                        <div class="flex-1 overflow-y-auto custom-scrollbar flex items-center justify-center p-8">
+                            <section class="w-full max-w-4xl space-y-8">
+                                <div class="text-center space-y-2 mb-10">
+                                    <h3 class="text-3xl font-display font-bold text-slate-900 dark:text-white">Start New Creation</h3>
+                                    <p class="text-slate-500 dark:text-slate-400">Define your project details below to generate industrial design concepts.</p>
+                                </div>
+                                <div class="space-y-6">
+                                    <div class="bg-white dark:bg-slate-900 p-6 rounded-md border border-slate-200 dark:border-slate-800 shadow-sm transition-shadow hover:shadow-md">
+                                        <div class="flex flex-col space-y-1">
+                                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-1">Project Name (项目名)</label>
+                                            <input 
+                                                value={projectName}
+                                                onChange={(e) => setProjectName(e.target.value)}
+                                                class="w-full text-xl font-display font-semibold border-none focus:ring-0 p-1 placeholder-slate-300 bg-transparent dark:text-white" 
+                                                placeholder="e.g. Minimalist Coffee Maker Concept" 
+                                                type="text"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div class="bg-white dark:bg-slate-900 rounded-md border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-shadow hover:shadow-md">
+                                        <div class="p-6 pb-2">
+                                            <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Design Requirements (需求描述)</label>
+                                        </div>
+                                        <div class="px-6 pb-6 space-y-4">
+                                            <textarea class="w-full text-lg border-none focus:ring-0 p-0 resize-none placeholder-slate-300 text-slate-700 dark:text-slate-300 bg-transparent leading-relaxed" placeholder="Describe the product goals, target audience, and aesthetic trends..." rows="8"></textarea>
+                                            <div class="flex items-center justify-between pt-4 border-t border-slate-50 dark:border-slate-800">
+                                                <button class="flex items-center space-x-2 px-4 py-2 rounded-md text-primary font-bold text-sm hover:bg-primary/10 transition-all border border-primary/20 active:scale-95">
+                                                    <span class="material-symbols-outlined text-lg">magic_button</span>
+                                                    <span>AI Creative Autocomplete (创意补全)</span>
+                                                </button>
+                                                <div class="flex space-x-2">
+                                                    <span class="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full text-[10px] font-bold uppercase tracking-tight">Industrial Design</span>
+                                                    <span class="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-full text-[10px] font-bold uppercase tracking-tight">Conceptual</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-center pt-6">
+                                        <button 
+                                            onClick={handleRun}
+                                            class="group relative inline-flex items-center justify-center px-20 py-5 font-bold text-white transition-all duration-300 bg-primary font-display rounded-md hover:scale-[1.02] focus:outline-none shadow-xl shadow-slate-200">
+                                            <span class="material-symbols-outlined mr-3 text-2xl group-hover:rotate-12 transition-transform">bolt</span>
+                                            <span class="text-xl">Run Workflow (点击运行)</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </section>
+                        </div>
+                        <Footer statusText="Pre-creation state" />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Screen 3: Loading (Simplified to use 65% logic) ---
+        const LoadingPage = () => {
+            const navigate = useNavigate();
+
+            useEffect(() => {
+                const timer = setTimeout(() => {
+                    navigate("/results");
+                }, 3000); // 3 seconds demo loading
+                return () => clearTimeout(timer);
+            }, [navigate]);
+
+            return (
+                <div class="flex h-screen overflow-hidden">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-950">
+                        <div class="flex-shrink-0 bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 shadow-sm z-20 opacity-60 pointer-events-none grayscale-[20%]">
+                            <header class="h-16 flex items-center justify-between px-8">
+                                <div class="flex items-center space-x-2">
+                                    <span class="material-symbols-outlined text-slate-400">pending</span>
+                                    <h2 class="text-lg font-display font-bold text-slate-800 dark:text-white">Processing: Polaroid High-End Camera Bag</h2>
+                                </div>
+                                <div class="flex items-center space-x-4">
+                                    <div class="flex items-center space-x-2 text-sm text-primary bg-primary/10 border border-primary/20 px-3 py-1.5 rounded-full font-medium">
+                                        <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                                        <span>Generation In Progress</span>
+                                    </div>
+                                </div>
+                            </header>
+                            <div class="px-8 pb-6">
+                                <div class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md overflow-hidden flex flex-col md:flex-row skeleton-overlay">
+                                    <div class="p-4 md:w-1/3 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700">
+                                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block">Project Summary</label>
+                                        <h3 class="text-base font-display font-bold text-slate-900 dark:text-white leading-tight">Polaroid High-End Camera Bag Concept</h3>
+                                        <div class="flex flex-wrap gap-2 mt-2">
+                                            <span class="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-400 rounded text-[9px] font-bold uppercase tracking-tight">#IndustrialDesign</span>
+                                            <span class="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 text-slate-400 rounded text-[9px] font-bold uppercase tracking-tight">#Fashion</span>
+                                        </div>
+                                    </div>
+                                    <div class="p-4 md:w-2/3">
+                                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block">Design Requirements & Parameters</label>
+                                        <p class="text-slate-400 text-xs leading-relaxed italic">
+                                            "做一款拍立得相机包，需要参考市场中高端品牌的女性包包去结合设计一些相机包..."
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center p-8">
+                            <div class="max-w-md w-full text-center space-y-8">
+                                <div class="relative flex items-center justify-center">
+                                    <div class="w-32 h-32 rounded-full border-4 border-slate-100 dark:border-slate-800"></div>
+                                    <div class="absolute w-32 h-32 rounded-full border-4 border-t-primary border-r-transparent border-b-transparent border-l-transparent animate-spinner"></div>
+                                    <div class="absolute flex flex-col items-center">
+                                        <span class="text-2xl font-display font-bold text-primary">65%</span>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <h2 class="text-xl font-display font-bold text-slate-900 dark:text-white tracking-tight">Generating Design Concepts...</h2>
+                                    <p class="text-sm text-slate-500">Estimated time remaining: 45s (预计时间: 45秒)</p>
+                                </div>
+                                <div class="space-y-4">
+                                    <div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                        <div class="bg-primary h-full w-[65%] rounded-full transition-all duration-1000"></div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div class="flex items-center space-x-2 text-xs font-medium text-emerald-600">
+                                            <span class="material-symbols-outlined text-sm font-bold">check_circle</span>
+                                            <span>Market Analysis Complete</span>
+                                        </div>
+                                        <div class="flex items-center space-x-2 text-xs font-medium text-emerald-600">
+                                            <span class="material-symbols-outlined text-sm font-bold">check_circle</span>
+                                            <span>Material Research Complete</span>
+                                        </div>
+                                        <div class="flex items-center space-x-2 text-xs font-medium text-primary">
+                                            <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                                            <span>Generating Visual Concepts...</span>
+                                        </div>
+                                        <div class="flex items-center space-x-2 text-xs font-medium text-slate-400">
+                                            <span class="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                                            <span>Final Report Assembly</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Footer statusText="AI Engine Processing..." />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Screen 2: Gallery Results ---
+        const ResultsPage = () => {
+            const [activeTab, setActiveTab] = useState("Gallery");
+            
+            const concepts = [
+                {
+                    id: 1,
+                    title: "Minimalist Leather Shell",
+                    variant: "Variant A - Premium Pebble Grain",
+                    tag: "High-End",
+                    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBhwlf9bx6rQOgG8UeqK3X3CFIZsOw-U3rvu_GZuVpw6cFxB3WVpZ4xvurM_hRw9JnzT3qypOUlaqgi89E0QdJVl0Mb3q3BGUGaZyD7btYY2MKZ7f2NNY3JYZ4-SOH97YXpYYf4V2iG4inM3IGbOpXKqfTqPJc2VuzecyNmh-_2Rb-5CrtDrjRR9oflZCgRH8xK8YqdFUzaTmuhFmclZayEBz_2zogujn-zsc0JOpWNiKh6RAgHefNKjCRGNQUsWWtsJynC0B4Sojth"
+                },
+                {
+                    id: 2,
+                    title: "Retro Brass Accents",
+                    variant: "Variant B - Modern Classic",
+                    tag: "Retro Brass",
+                    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDI62u7r_CtdkdEtjBATVxUDPglvctB9pekf3t95el0KtHWg2kwof6OUj-wK4p3zJ8rf0BG9lFdSOhk0TftO51rKZ7oXYuxRvKdDEPxaezz6S7lO4EAFcJ2CeDYf-OgI_Xnmu4olxo-USrL11xsF7QcnECBeil8erR3sPudE9yNGJQRf82zwmVIz9RJAB2ycO7vCNzvLgEQEDOytJxMyKU7T5UwIA70zcrrcEAWV1XV97Szn-NSKlbZsrmMLL3sJwHm4-xVIajKPmlM"
+                },
+                {
+                    id: 3,
+                    title: "Structured Runway Style",
+                    variant: "Variant C - High-Fashion",
+                    tag: "Light Luxury",
+                    image: "https://lh3.googleusercontent.com/aida-public/AB6AXuCkhowdJxqcJsFpogZ2kA26Q_OKzD2zNUgGxQuT8gcsCIYjanGRkE-cZiYRXBmTZNEe8F9-JJkhjGJWc4IVJSmr_SYW9FJIopBUNlyZpcdZUETUZcwtOsMOOozNrz5dv07SNxIMlhUiI1NSwYAbS2Zfl73UHYLCqSrvg5QelzkFEMHSKiqDjLmAgQ3VZrjGSIuGnoRLd75UsxA2rWKqMYifpzC_ZqTlQKhe-e56g2WqRQMl7I7w4smODUXQtlQTyB2wRj9dI-RXoFIl"
+                }
+            ];
+
+            return (
+                <div class="flex h-screen overflow-hidden">
+                    <Sidebar />
+                    <main class="flex-1 flex flex-col overflow-hidden bg-slate-50/50 dark:bg-slate-950">
+                        <div class="flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm z-20">
+                            <header class="h-16 flex items-center justify-between px-8">
+                                <div class="flex items-center space-x-2">
+                                    <span class="material-symbols-outlined text-primary">verified</span>
+                                    <h2 class="text-lg font-display font-bold text-slate-800 dark:text-white">Results: Polaroid High-End Camera Bag</h2>
+                                </div>
+                                <div class="flex items-center space-x-4">
+                                    <div class="flex items-center space-x-2 text-sm text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 px-3 py-1.5 rounded-full font-medium">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                        <span>Generation Complete</span>
+                                    </div>
+                                </div>
+                            </header>
+                            <div class="px-8 pb-6">
+                                <div class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md overflow-hidden flex flex-col md:flex-row">
+                                    <div class="p-4 md:w-1/3 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700">
+                                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block">Project Summary</label>
+                                        <h3 class="text-base font-display font-bold text-slate-900 dark:text-white leading-tight">Polaroid High-End Camera Bag Concept</h3>
+                                        <div class="flex flex-wrap gap-2 mt-2">
+                                            <span class="px-2 py-0.5 bg-primary/10 text-primary rounded text-[9px] font-bold uppercase tracking-tight border border-primary/20">#IndustrialDesign</span>
+                                            <span class="px-2 py-0.5 bg-primary/10 text-primary rounded text-[9px] font-bold uppercase tracking-tight border border-primary/20">#Fashion</span>
+                                        </div>
+                                    </div>
+                                    <div class="p-4 md:w-2/3">
+                                        <label class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block">Design Requirements & Parameters</label>
+                                        <p class="text-slate-600 dark:text-slate-400 text-xs leading-relaxed italic">
+                                            "做一款拍立得相机包，需要参考市场中高端品牌的女性包包去结合设计一些相机包。要求使用荔枝纹皮革，金属件采用复古黄铜色，融合轻奢时尚感。目标受众为20-35岁追求品质生活的女性。"
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-1 overflow-y-auto custom-scrollbar">
+                            <div class="max-w-[1500px] mx-auto p-8 space-y-6">
+                                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+                                    <nav class="flex space-x-1 p-1 bg-slate-100 rounded-md">
+                                        {["Gallery", "Market Analysis", "Material Research", "Design Logic", "FULL REPORT"].map((tab) => (
+                                            <button 
+                                                key={tab}
+                                                onClick={() => setActiveTab(tab)}
+                                                class={`px-5 py-2 text-[11px] font-bold rounded-md flex items-center space-x-1.5 transition-all uppercase tracking-wider ${activeTab === tab ? 'text-primary bg-white shadow-sm' : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'}`}
+                                            >
+                                                {tab === 'Gallery' && <span class="material-symbols-outlined text-sm">grid_view</span>}
+                                                {tab === 'FULL REPORT' && <span class="material-symbols-outlined text-sm">description</span>}
+                                                <span>{tab}</span>
+                                            </button>
+                                        ))}
+                                    </nav>
+                                    <div class="flex space-x-3 items-center">
+                                        <button class="flex items-center space-x-2 px-4 py-2 bg-primary text-white rounded-md hover:opacity-90 text-sm font-bold shadow-lg transition-all">
+                                            <span class="material-symbols-outlined text-lg">download</span>
+                                            <span>Export All</span>
+                                        </button>
+                                        <button class="p-2.5 bg-white border border-slate-200 rounded-md hover:bg-slate-50 text-slate-500 shadow-sm transition-all">
+                                            <span class="material-symbols-outlined">share</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="gallery-grid">
+                                    {concepts.map(concept => (
+                                        <div key={concept.id} class="group relative bg-white dark:bg-slate-900 rounded-md overflow-hidden border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1">
+                                            <img alt={concept.title} class="w-full aspect-[4/5] object-cover group-hover:scale-105 transition-transform duration-700" src={concept.image}/>
+                                            <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+                                                <div class="translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                                                    <p class="text-white text-lg font-bold font-display">{concept.title}</p>
+                                                    <p class="text-slate-300 text-xs mt-1">{concept.variant}</p>
+                                                    <div class="flex space-x-2 mt-4">
+                                                        <button class="flex-1 py-2 bg-white text-slate-900 rounded-md text-[10px] font-bold uppercase tracking-wider hover:bg-slate-100">Preview</button>
+                                                        <button class="p-2 bg-white/20 backdrop-blur-md text-white rounded-md hover:bg-white/40"><span class="material-symbols-outlined text-xs">favorite</span></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="absolute top-4 left-4 flex space-x-2">
+                                                <span class="px-2.5 py-1 bg-white/90 backdrop-blur text-slate-900 text-[9px] font-black uppercase rounded-full shadow-sm">{concept.tag}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <Footer statusText="Verified AI Output" />
+                    </main>
+                </div>
+            );
+        };
+
+        // --- App Entry ---
+        const App = () => {
+            return (
+                <MemoryRouter>
+                    <Routes>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/loading" element={<LoadingPage />} />
+                        <Route path="/results" element={<ResultsPage />} />
+                    </Routes>
+                </MemoryRouter>
+            );
+        };
+
+        const container = document.getElementById('root');
+        const root = createRoot(container);
+        root.render(<App />);
+    </script>
+</body>
+</html>
