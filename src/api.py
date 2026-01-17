@@ -11,10 +11,10 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from . import md_parser
-from . import config
-from .main import DesignWorkflow
-from .llm_wrapper import LLMService
+import md_parser
+import config
+from main import DesignWorkflow
+from llm_wrapper import LLMService
 
 # Initialize FastAPI app
 app = FastAPI(title="AI Design Workflow API")
