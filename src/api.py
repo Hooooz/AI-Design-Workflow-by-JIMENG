@@ -1,10 +1,15 @@
 
 import os
+import sys
 import time
 import json
 import zipfile
 import io
 import shutil
+
+# Add current directory to path for imports
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException, Body, Response
 from fastapi.responses import StreamingResponse
@@ -103,6 +108,29 @@ def get_workflow(project_name: str, model_name: str):
     return DesignWorkflow(output_dir=project_dir, custom_config=custom_config), project_dir
 
 # Endpoints
+
+@app.get("/api/health")
+def health_check():
+    """
+    健康检查接口，用于验证服务状态及 LLM 配置
+    """
+    status = {
+        "status": "ok",
+        "timestamp": time.time(),
+        "env": config.ENV,
+        "llm_configured": bool(config.OPENAI_API_KEY),
+        "base_url": config.OPENAI_BASE_URL
+    }
+    
+    # 简单的连通性测试 (可选)
+    # try:
+    #     llm = LLMService()
+    #     if llm.client:
+    #         status["llm_connection"] = "connected"
+    # except Exception as e:
+    #     status["llm_connection"] = f"error: {str(e)}"
+        
+    return status
 
 @app.get("/api/projects")
 def list_projects():

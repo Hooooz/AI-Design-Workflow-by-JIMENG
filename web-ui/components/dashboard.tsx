@@ -598,5 +598,42 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
 
   if (project === null && status === "pending") return renderHome()
   if (status === "in_progress") return renderLoading()
+  
+  if (status === "failed") {
+      return (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 bg-zinc-50/50 dark:bg-zinc-950">
+            <div className="text-center space-y-4 max-w-md">
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto">
+                    <Zap className="h-8 w-8 text-red-500" />
+                </div>
+                <h3 className="text-xl font-display font-bold text-zinc-900 dark:text-white">
+                    任务运行失败
+                </h3>
+                <p className="text-zinc-500 dark:text-zinc-400 text-sm">
+                    后端服务暂时无法响应，可能是因为 API Key 配置错误或网络超时。
+                </p>
+                <div className="flex gap-4 justify-center pt-4">
+                    <Button variant="outline" onClick={() => {
+                        setStatus("pending")
+                        setProjectName("")
+                        setBrief("")
+                        // Reload page to reset state completely
+                        window.location.reload()
+                    }}>
+                        返回首页
+                    </Button>
+                    <Button onClick={() => {
+                        // Retry the last step? Currently we just reset to home for simplicity
+                        // or user can try to run again if we kept the state
+                        setStatus("pending")
+                    }}>
+                        重试
+                    </Button>
+                </div>
+            </div>
+        </div>
+      )
+  }
+
   return renderResults()
 }

@@ -93,8 +93,9 @@ except Exception as e:
             f.write("import os\n" + tool_call_script)
             
         try:
-            # 使用 uv run 执行脚本，确保环境一致，并显式添加 requests, fastmcp, brotli 依赖
-            cmd = ["uv", "run", "--with", "requests", "--with", "fastmcp", "--with", "brotli", client_script_path]
+            # 在生产环境中，我们假设依赖已经通过 requirements.txt 安装
+            # 不再使用 uv run，直接使用 python3 执行
+            cmd = ["python3", client_script_path]
             result = subprocess.run(cmd, capture_output=True, text=True, cwd=os.path.dirname(self.server_script_path))
             
             if result.returncode != 0:

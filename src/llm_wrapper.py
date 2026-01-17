@@ -28,26 +28,26 @@ class LLMService:
 
     def chat_completion(self, messages: List[Dict[str, str]], model: str = config.DEFAULT_MODEL) -> str:
         """
-        调用 LLM 生成回复。如果 client 未初始化，则返回模拟数据。
+        调用 LLM 生成回复。
         """
-        if self.client:
-            try:
-                response = self.client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=0.7
-                )
-                return response.choices[0].message.content
-            except Exception as e:
-                print(f"Error calling API: {e}")
-                return self._mock_response(messages)
-        else:
-            return self._mock_response(messages)
+        if not self.client:
+            # 如果没有初始化 client，直接抛出异常，不再静默 Mock
+            raise ValueError("OpenAI client not initialized. Please check OPENAI_API_KEY.")
+
+        try:
+            response = self.client.chat.completions.create(
+                model=model,
+                messages=messages,
+                temperature=0.7
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            print(f"Error calling API: {e}")
+            # 在生产环境中，我们希望看到真实的错误，而不是 Mock 数据
+            raise e
 
     def _mock_response(self, messages: List[Dict[str, str]]) -> str:
-        """
-        模拟回复，用于演示流程
-        """
+        # Mock 逻辑保留用于测试，但不再自动触发
         last_user_msg = messages[-1]['content']
         time.sleep(1.5) # 模拟思考时间
         
