@@ -21,6 +21,118 @@ from main import DesignWorkflow
 from llm_wrapper import LLMService
 from task_manager import TaskRegistry, compute_dedup_key, normalize_text
 
+# Initialize Supabase database connection
+_supabase_client = None
+
+
+def get_supabase_client():
+    global _supabase_client
+    if _supabase_client is None:
+        if config.SUPABASE_URL and config.SUPABASE_KEY:
+            try:
+                from supabase import create_client
+
+                _supabase_client = create_client(
+                    config.SUPABASE_URL, config.SUPABASE_KEY
+                )
+            except ImportError:
+                print("supabase-py 未安装，数据库功能不可用")
+                _supabase_client = False
+            except Exception as e:
+                print(f"Supabase 连接失败: {e}")
+                _supabase_client = False
+    return _supabase_client if _supabase_client else None
+
+
+# Database operations
+def db_get_projects():
+    client = get_supabase_client()
+    if not client:
+        return []
+    try:
+        result = (
+            client.table("projects")
+            .select("*")
+            .order("creation_time", desc=True)
+            .execute()
+        )
+        return result.data
+    except Exception as e:
+        print(f"数据库查询失败: {e}")
+        return []
+
+
+def db_get_project(project_name: str):
+    client = get_supabase_client()
+    if not client:
+        return None
+    try:
+        result = (
+            client.table("projects")
+            .select("*")
+            .eq("project_name", project_name)
+            .execute()
+        )
+        if result.data:
+            return result.data[0]
+        return None
+    except Exception as e:
+        print(f"数据库查询失败: {e}")
+        return None
+
+
+def db_create_project(
+    project_name: str, brief: str, model_name: str, tags: List[str] = None
+):
+    client = get_supabase_client()
+    if not client:
+        return None
+    try:
+        data = {
+            "project_name": project_name,
+            "brief": brief,
+            "model_name": model_name,
+            "creation_time": time.time(),
+            "status": "pending",
+            "current_step": "",
+            "tags": tags or [],
+        }
+        result = client.table("projects").insert(data).execute()
+        return result.data[0] if result.data else None
+    except Exception as e:
+        print(f"数据库插入失败: {e}")
+        return None
+
+
+def db_update_project(project_name: str, **kwargs):
+    client = get_supabase_client()
+    if not client:
+        return None
+    try:
+        result = (
+            client.table("projects")
+            .update(kwargs)
+            .eq("project_name", project_name)
+            .execute()
+        )
+        return result.data[0] if result.data else None
+    except Exception as e:
+        print(f"数据库更新失败: {e}")
+        return None
+
+
+def db_delete_project(project_name: str):
+    client = get_supabase_client()
+    if not client:
+        return False
+    try:
+        client.table("projects").delete().eq("project_name", project_name).execute()
+        return True
+    except Exception as e:
+        print(f"数据库删除失败: {e}")
+        return False
+
+
 # Initialize FastAPI app
 app = FastAPI(title="AI Design Workflow API")
 
@@ -99,14 +211,29 @@ def save_metadata(project_dir: str, metadata: ProjectMetadata):
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(metadata.dict(), f, indent=4, ensure_ascii=False)
 
+    # 同步到数据库
+    try:
+        db_update_project(
+            metadata.project_name,
+            brief=metadata.brief,
+            status=metadata.status,
+            current_step=metadata.current_step,
+            tags=metadata.tags,
+            model_name=metadata.model_name,
+        )
+    except Exception as e:
+        print(f"数据库同步失败: {e}")
+
 
 # Helper to get workflow instance
 def get_workflow(project_name: str, model_name: str):
     root_dir = os.path.dirname(os.path.abspath(__file__))
     project_dir = os.path.join(os.path.dirname(root_dir), "projects", project_name)
 
+    is_new_project = False
     if not os.path.exists(project_dir):
         os.makedirs(project_dir)
+        is_new_project = True
         # Initialize metadata for new project
         meta = ProjectMetadata(
             project_name=project_name,
@@ -116,6 +243,8 @@ def get_workflow(project_name: str, model_name: str):
             status="pending",
         )
         save_metadata(project_dir, meta)
+        # 同时写入数据库
+        db_create_project(project_name, "", model_name, [])
 
     config_path = os.path.join(os.path.dirname(root_dir), "CONFIG.md")
     md_config = (
@@ -167,6 +296,12 @@ def health_check():
 
 @app.get("/api/projects")
 def list_projects():
+    # 优先从数据库获取
+    db_projects = db_get_projects()
+    if db_projects:
+        return db_projects
+
+    # Fallback: 从文件系统获取
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     projects_dir = os.path.join(root_dir, "projects")
 
@@ -205,6 +340,9 @@ def get_project(project_name: str):
 
     if not os.path.exists(project_dir):
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # 优先从数据库获取元数据
+    db_meta = db_get_project(project_name)
 
     meta = get_metadata(project_dir)
 
@@ -246,16 +384,25 @@ def get_project(project_name: str):
         reverse=True,
     )
 
+    # 优先使用数据库元数据，否则使用文件系统
+    metadata = (
+        db_meta
+        if db_meta
+        else (
+            meta.dict()
+            if meta
+            else {
+                "project_name": project_name,
+                "brief": "",
+                "creation_time": os.path.getmtime(project_dir),
+                "status": "completed",
+                "tags": [],
+            }
+        )
+    )
+
     return {
-        "metadata": meta.dict()
-        if meta
-        else {
-            "project_name": project_name,
-            "brief": "",
-            "creation_time": os.path.getmtime(project_dir),
-            "status": "completed",
-            "tags": [],
-        },
+        "metadata": metadata,
         "market_analysis": read_file("1_Market_Analysis.md"),
         "visual_research": read_file("2_Visual_Research.md"),
         "design_proposals": read_file("3_Design_Proposals.md"),
