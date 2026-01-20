@@ -88,6 +88,35 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
   // which then proxies to the backend defined in next.config.ts
   const API_URL = ""
 
+  // Retry-enabled fetch helper
+  async function fetchWithRetry(url: string, options?: RequestInit, maxRetries = 3): Promise<Response> {
+    let lastError: Error | null = null
+    
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const res = await fetch(url, options)
+        if (res.ok) return res
+        
+        // Don't retry on client errors (4xx)
+        if (res.status >= 400 && res.status < 500) {
+          throw new Error(`HTTP ${res.status}`)
+        }
+        
+        // Retry on server errors (5xx) or network errors
+        lastError = new Error(`HTTP ${res.status}`)
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error(String(e))
+      }
+      
+      // Wait before retry (exponential backoff)
+      if (i < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 500))
+      }
+    }
+    
+    throw lastError
+  }
+
   const [tags, setTags] = useState<string[]>([])
   const [isAutocompleteLoading, setIsAutocompleteLoading] = useState(false)
   const [isTagsLoading, setIsTagsLoading] = useState(false)
@@ -402,39 +431,32 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
     setProgress(5)
     
     try {
-        // 调用新的异步全流程接口
-        const res = await fetch(`${API_URL}/api/workflow/run_all`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                project_name: projectName,
-                brief: brief,
-                model_name: modelName,
-                settings: {
-                    image_count: imageCount,
-                    persona: userPersona,
-                    jimeng_session_id: jimengSessionId
-                }
-            })
+      const res = await fetchWithRetry(`${API_URL}/api/workflow/run_all`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project_name: projectName,
+          brief: brief,
+          model_name: modelName,
+          settings: {
+            image_count: imageCount,
+            persona: userPersona,
+            jimeng_session_id: jimengSessionId
+          }
         })
-        
-        if (res.ok) {
-            console.log("全流程任务已提交后台运行")
-            // 触发 onProjectCreated 以刷新侧边栏
-            onProjectCreated(projectName)
-            
-            // 启动轮询 (useEffect 会自动处理 status="in_progress" 的轮询)
-            // 这里我们只需要确保本地状态正确，让 useEffect 接管
-        } else {
-            throw new Error("Failed to start workflow")
-        }
+      }, 3)
+      
+      if (res.ok) {
+        console.log("全流程任务已提交后台运行")
+        onProjectCreated(projectName)
+      } else {
+        throw new Error("Failed to start workflow")
+      }
     } catch (e) {
-        setStatus("failed")
-        console.error("运行失败:", e)
-        setLoading(false)
+      setStatus("failed")
+      console.error("运行失败:", e)
+      setLoading(false)
     }
-    // 注意：这里不要 setLoading(false)，因为任务还在后台跑
-    // setLoading(false) 会由轮询逻辑在检测到完成时触发
   }
 
   // --- Render Functions ---

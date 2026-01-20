@@ -38,9 +38,24 @@ export function HomeClient({ initialProjects }: HomeClientProps) {
     
     try {
       setIsProjectsLoading(true)
-      const response = await fetch('/api/projects')
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      const data = await response.json()
+      // Retry-enabled fetch
+      let res: Response | null = null
+      let lastError: Error | null = null
+      
+      for (let i = 0; i < 3; i++) {
+        try {
+          res = await fetch('/api/projects')
+          if (res.ok) break
+          lastError = new Error(`HTTP ${res.status}`)
+        } catch (e) {
+          lastError = e instanceof Error ? e : new Error(String(e))
+        }
+        if (i < 2) await new Promise(r => setTimeout(r, Math.pow(2, i) * 500))
+      }
+      
+      if (!res || !res.ok) throw lastError || new Error("Failed to fetch")
+      
+      const data = await res.json()
       setProjects(data)
       
       const hasInProgress = data.some((p: Project) => p.status === 'in_progress' || p.status === 'pending')
