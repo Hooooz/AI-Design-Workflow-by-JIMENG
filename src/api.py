@@ -96,6 +96,7 @@ def db_create_project(
             "status": "pending",
             "current_step": "",
             "tags": tags or [],
+            "content": {},  # 文档内容 JSON
         }
         result = client.table("projects").insert(data).execute()
         return result.data[0] if result.data else None
@@ -124,6 +125,12 @@ def db_update_project(project_name: str, **kwargs):
 def db_delete_project(project_name: str):
     client = get_supabase_client()
     if not client:
+        return False
+    try:
+        client.table("projects").delete().eq("project_name", project_name).execute()
+        return True
+    except Exception as e:
+        print(f"数据库删除失败: {e}")
         return False
     try:
         client.table("projects").delete().eq("project_name", project_name).execute()
@@ -223,6 +230,38 @@ def save_metadata(project_dir: str, metadata: ProjectMetadata):
         )
     except Exception as e:
         print(f"数据库同步失败: {e}")
+
+
+def save_project_content(project_name: str, content: Dict[str, str]):
+    """保存项目文档内容到数据库"""
+    try:
+        db_update_project(project_name, content=content)
+    except Exception as e:
+        print(f"保存项目内容失败: {e}")
+
+
+def save_intermediate_and_db(workflow, project_name: str, filename: str, content: str):
+    """保存中间文件到文件系统和数据库"""
+    # 保存到文件系统
+    workflow._save_intermediate(filename, content)
+
+    # 映射文件名到数据库字段
+    content_mapping = {
+        "1_Market_Analysis.md": "market_analysis",
+        "2_Visual_Research.md": "visual_research",
+        "3_Design_Proposals.md": "design_proposals",
+        "Full_Design_Report.md": "full_report",
+    }
+
+    field = content_mapping.get(filename)
+    if field:
+        # 获取现有数据库内容
+        db_proj = db_get_project(project_name)
+        existing_content = db_proj.get("content", {}) if db_proj else {}
+        existing_content[field] = content
+
+        # 保存到数据库
+        save_project_content(project_name, existing_content)
 
 
 # Helper to get workflow instance
@@ -401,12 +440,29 @@ def get_project(project_name: str):
         )
     )
 
+    # 从数据库读取文档内容
+    db_content = db_meta.get("content", {}) if db_meta else {}
+
+    # 优先使用数据库内容，其次使用文件系统
+    market_analysis = db_content.get("market_analysis", "") or read_file(
+        "1_Market_Analysis.md"
+    )
+    visual_research = db_content.get("visual_research", "") or read_file(
+        "2_Visual_Research.md"
+    )
+    design_proposals = db_content.get("design_proposals", "") or read_file(
+        "3_Design_Proposals.md"
+    )
+    full_report = db_content.get("full_report", "") or read_file(
+        "Full_Design_Report.md"
+    )
+
     return {
         "metadata": metadata,
-        "market_analysis": read_file("1_Market_Analysis.md"),
-        "visual_research": read_file("2_Visual_Research.md"),
-        "design_proposals": read_file("3_Design_Proposals.md"),
-        "full_report": read_file("Full_Design_Report.md"),
+        "market_analysis": market_analysis,
+        "visual_research": visual_research,
+        "design_proposals": design_proposals,
+        "full_report": full_report,
         "images": images,
     }
 
@@ -440,13 +496,17 @@ def background_run_all(
         meta.current_step = "market_analysis"
         save_metadata(project_dir, meta)
         market_analysis, _ = workflow.step_market_analysis(brief)
-        workflow._save_intermediate("1_Market_Analysis.md", market_analysis)
+        save_intermediate_and_db(
+            workflow, project_name, "1_Market_Analysis.md", market_analysis
+        )
 
         # Step 2: Visual Research
         meta.current_step = "visual_research"
         save_metadata(project_dir, meta)
         visual_research, _ = workflow.step_visual_research(brief, market_analysis)
-        workflow._save_intermediate("2_Visual_Research.md", visual_research)
+        save_intermediate_and_db(
+            workflow, project_name, "2_Visual_Research.md", visual_research
+        )
 
         # Step 3: Design Generation
         meta.current_step = "design_generation"
@@ -460,7 +520,9 @@ def background_run_all(
             image_count=image_count,
             persona=persona,
         )
-        workflow._save_intermediate("3_Design_Proposals.md", design_proposals)
+        save_intermediate_and_db(
+            workflow, project_name, "3_Design_Proposals.md", design_proposals
+        )
 
         # Step 4: Image Generation
         meta.current_step = "image_generation"
@@ -556,12 +618,16 @@ def run_step(req: StepRequest):
         start_time = time.time()
         if req.step == "market_analysis":
             result, _ = workflow.step_market_analysis(req.brief)
-            workflow._save_intermediate("1_Market_Analysis.md", result)
+            save_intermediate_and_db(
+                workflow, req.project_name, "1_Market_Analysis.md", result
+            )
 
         elif req.step == "visual_research":
             market_analysis = req.context.get("market_analysis", "")
             result, _ = workflow.step_visual_research(req.brief, market_analysis)
-            workflow._save_intermediate("2_Visual_Research.md", result)
+            save_intermediate_and_db(
+                workflow, req.project_name, "2_Visual_Research.md", result
+            )
 
         elif req.step == "design_generation":
             market_analysis = req.context.get("market_analysis", "")
@@ -577,7 +643,9 @@ def run_step(req: StepRequest):
                 image_count=image_count,
                 persona=persona,
             )
-            workflow._save_intermediate("3_Design_Proposals.md", result)
+            save_intermediate_and_db(
+                workflow, req.project_name, "3_Design_Proposals.md", result
+            )
 
         elif req.step == "image_generation":
             prompts_list = req.context.get("design_prompts", [])
@@ -642,19 +710,14 @@ def run_step_stream(req: StepRequest):
     async def stream_generator():
         try:
             if req.step == "market_analysis":
-                # 对于流式请求，我们需要直接调用 main.py 中支持流式的方法
-                # 这里假设 step_market_analysis 等方法已经修改为支持返回 stream
                 stream_response = workflow.step_market_analysis(req.brief, stream=True)
                 full_content = ""
                 for chunk in stream_response:
                     full_content += chunk
                     yield chunk
-
-                # 流式结束后，保存文件（这一步需要完整的 content）
-                # 注意：这里我们只能拿到 markdown 内容，prompts 和 data 可能拿不到
-                # 如果需要保存中间 JSON，可能需要对流式处理做更多改造
-                # 暂时只保存 markdown
-                workflow._save_intermediate("1_Market_Analysis.md", full_content)
+                save_intermediate_and_db(
+                    workflow, req.project_name, "1_Market_Analysis.md", full_content
+                )
 
             elif req.step == "visual_research":
                 market_analysis = req.context.get("market_analysis", "")
@@ -665,7 +728,9 @@ def run_step_stream(req: StepRequest):
                 for chunk in stream_response:
                     full_content += chunk
                     yield chunk
-                workflow._save_intermediate("2_Visual_Research.md", full_content)
+                save_intermediate_and_db(
+                    workflow, req.project_name, "2_Visual_Research.md", full_content
+                )
 
             elif req.step == "design_generation":
                 market_analysis = req.context.get("market_analysis", "")
@@ -685,7 +750,9 @@ def run_step_stream(req: StepRequest):
                 for chunk in stream_response:
                     full_content += chunk
                     yield chunk
-                workflow._save_intermediate("3_Design_Proposals.md", full_content)
+                save_intermediate_and_db(
+                    workflow, req.project_name, "3_Design_Proposals.md", full_content
+                )
 
             # Update metadata to completed if needed
             # 这里简化处理，实际应该在流式结束后更新
