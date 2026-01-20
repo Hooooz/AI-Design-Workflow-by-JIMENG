@@ -42,6 +42,18 @@ interface DashboardProps {
   onProjectCreated: (projectName: string) => void
 }
 
+interface ProposalItem {
+    image_path?: string;
+    scheme?: string;
+    concept?: string;
+    inspiration?: string;
+    description?: string;
+    cmf?: string;
+    prompt?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    [key: string]: any;
+}
+
 const STEPS = [
   { id: "market_analysis", label: "市场", icon: TrendingUp },
   { id: "visual_research", label: "视觉", icon: Palette },
@@ -62,6 +74,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
   const [modelName, setModelName] = useState("gemini-2.0-flash-exp")
   
   // Data State
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [data, setData] = useState<Record<string, any>>({
     market_analysis: "",
     visual_research: "",
@@ -591,7 +604,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
 
                     {/* Proposals Grid */}
                     <div className="grid gap-12">
-                        {prompts.map((item: any, i: number) => (
+                        {prompts.map((item: ProposalItem, i: number) => (
                             <div key={i} className="group relative bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
                                 <div className="grid md:grid-cols-2 gap-0 h-full">
                                     {/* Left: Image */}
@@ -728,7 +741,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                              视觉方案与提示词
                         </h3>
                         <div className="grid gap-4 md:grid-cols-2">
-                            {(parsedData.visuals || parsedData.prompts).map((item: any, i: number) => (
+                            {(parsedData.visuals || parsedData.prompts).map((item: ProposalItem, i: number) => (
                                 <div key={i} className="bg-zinc-50 dark:bg-zinc-900/50 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors group">
                                     <div className="flex items-center gap-2 mb-3">
                                         <span className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-800 text-xs font-bold text-zinc-600 dark:text-zinc-400">
@@ -1134,12 +1147,12 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                     let galleryItems = [];
                                     
                                     // 1. Try to parse design_proposals to get structured prompts
-                                    let promptsMap = new Map();
+                                    const promptsMap = new Map();
                                     try {
                                         if (data.design_proposals && data.design_proposals.trim().startsWith('{')) {
                                             const parsed = JSON.parse(data.design_proposals);
                                             if (parsed.prompts && Array.isArray(parsed.prompts)) {
-                                                parsed.prompts.forEach((p: any) => {
+                                                parsed.prompts.forEach((p: ProposalItem) => {
                                                     if (p.image_path) {
                                                         // Normalize path to match data.images format
                                                         const normalizedPath = p.image_path.startsWith('/') ? p.image_path : `/${p.image_path}`;
@@ -1161,7 +1174,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                     }
                                     
                                     return galleryItems.length > 0 ? (
-                                        galleryItems.map((item: any, idx: number) => (
+                                        galleryItems.map((item: ProposalItem & { src: string }, idx: number) => (
                                             <div key={idx} className="group relative bg-white dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
                                                 <div className="aspect-[4/5] overflow-hidden bg-zinc-100 dark:bg-zinc-800 relative">
                                                     <img 
