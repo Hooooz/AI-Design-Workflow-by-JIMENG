@@ -833,10 +833,9 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                     <div className="space-y-12 animate-in fade-in duration-500">
                         {/* Intro/Core Idea Section */}
                         {intro && (
-                            <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-zinc-950 p-8 rounded-3xl shadow-xl text-white relative overflow-hidden">
-                                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                            <div className="text-white relative overflow-hidden">
                                  <div className="relative z-10">
-                                     <h4 className="flex items-center gap-3 text-white/60 font-bold mb-4 text-xs uppercase tracking-widest">
+                                     <h4 className="flex items-center gap-3 font-bold mb-4 text-xs uppercase tracking-widest text-white/60">
                                          <Sparkles className="h-4 w-4" /> 
                                          {activeTab === "market_analysis" ? "市场洞察摘要" : "视觉研究摘要"}
                                      </h4>
