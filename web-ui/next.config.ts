@@ -14,8 +14,14 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    let apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     console.log('API Rewrite Destination:', apiUrl);
+    
+    // Ensure apiUrl starts with http:// or https://
+    if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
+        apiUrl = `https://${apiUrl}`;
+    }
+    
     return [
       {
         source: '/api/:path*',
