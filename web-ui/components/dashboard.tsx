@@ -63,7 +63,7 @@ const STEPS = [
 
 export function Dashboard({ project, onProjectCreated }: DashboardProps) {
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState("design_generation")
+  const [activeTab, setActiveTab] = useState("market_analysis")
   const [status, setStatus] = useState<string>("pending")
   const [currentStep, setCurrentStep] = useState<string>("")
   const [progress, setProgress] = useState(0)
@@ -159,10 +159,10 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                    setStatus(updatedData.metadata.status)
                    setCurrentStep(updatedData.metadata.current_step)
                    
-                   // Auto-switch tab based on current step
-                   if (updatedData.metadata.current_step && STEPS.some(s => s.id === updatedData.metadata.current_step)) {
-                       setActiveTab(updatedData.metadata.current_step)
-                   }
+                   // Auto-switch tab logic disabled as per user request
+                   // if (updatedData.metadata.current_step && STEPS.some(s => s.id === updatedData.metadata.current_step)) {
+                   //    setActiveTab(updatedData.metadata.current_step)
+                   // }
                    
                    setData(prev => ({
                      ...prev,
@@ -576,8 +576,8 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
     )
 
     if (isJson && parsedData) {
-        // Special rendering for Design Generation (Design Proposals)
-        if (activeTab === "design_generation") {
+        // Special rendering for Design Generation (Design Proposals), Market Analysis, and Visual Research
+        if (["design_generation", "market_analysis", "visual_research"].includes(activeTab)) {
             const coreIdea = parsedData.summary || parsedData.core_idea || "";
             const prompts = parsedData.prompts || parsedData.visuals || [];
             
@@ -782,6 +782,77 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                 )}
             </div>
         )
+    }
+
+    // UI Optimization: Transform standard Markdown into Cards for Market/Visual tabs
+    // This allows them to look like the "Solution" tab even without JSON structure
+    if (["market_analysis", "visual_research"].includes(activeTab)) {
+        // Split by H2 (## ) to create sections
+        // We use a regex that matches ## followed by space, and capture the content
+        const sections = processedContent.split(/(?=^##\s)/m);
+        
+        // Filter out empty sections
+        const nonEmptySections = sections.filter(s => s.trim().length > 0);
+        
+        if (nonEmptySections.length > 0) {
+            // The first section might be intro (if it doesn't start with ##) or the first card
+            let intro = "";
+            let cardsContent = nonEmptySections;
+            
+            if (!nonEmptySections[0].trim().startsWith("##")) {
+                intro = nonEmptySections[0];
+                cardsContent = nonEmptySections.slice(1);
+            }
+
+            return (
+                <div className="space-y-12 animate-in fade-in duration-500">
+                    {/* Intro/Core Idea Section */}
+                    {intro && (
+                        <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-zinc-950 p-8 rounded-3xl shadow-xl text-white relative overflow-hidden">
+                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                             <div className="relative z-10">
+                                 <h4 className="flex items-center gap-3 text-white/60 font-bold mb-4 text-xs uppercase tracking-widest">
+                                     <Sparkles className="h-4 w-4" /> 
+                                     {activeTab === "market_analysis" ? "市场洞察摘要" : "视觉研究摘要"}
+                                 </h4>
+                                 <div className="text-base md:text-lg font-medium leading-relaxed opacity-90 prose prose-invert max-w-none">
+                                     <MarkdownRenderer>{intro}</MarkdownRenderer>
+                                 </div>
+                             </div>
+                        </div>
+                    )}
+
+                    {/* Content Cards Grid */}
+                    {cardsContent.length > 0 && (
+                        <div className="grid gap-8 md:grid-cols-1"> 
+                            {cardsContent.map((section, i) => {
+                                // Extract title from ## Title
+                                const lines = section.trim().split('\n');
+                                const titleLine = lines[0];
+                                const contentBody = lines.slice(1).join('\n');
+                                const title = titleLine.replace(/^##\s+/, '').trim();
+                                
+                                return (
+                                    <div key={i} className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col">
+                                        <div className="p-8 md:p-10 flex-1">
+                                            <h3 className="text-2xl font-display font-bold text-zinc-900 dark:text-white mb-6 flex items-center gap-3">
+                                                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm font-bold text-zinc-500">
+                                                    {i + 1}
+                                                </span>
+                                                {title}
+                                            </h3>
+                                            <div className="prose prose-zinc prose-lg max-w-none dark:prose-invert">
+                                                 <MarkdownRenderer>{contentBody}</MarkdownRenderer>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            );
+        }
     }
 
     // Default Markdown Rendering (for non-JSON content)
