@@ -71,7 +71,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
   // Form State
   const [projectName, setProjectName] = useState("拍立得相机包")
   const [brief, setBrief] = useState("做一款拍立得相机包，需要参考市场中高端品牌的女性包包去结合设计一些相机包")
-  const [modelName, setModelName] = useState("gemini-2.0-flash-exp")
+  const [modelName, setModelName] = useState("gemini-2.5-flash")
   
   // Data State
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -245,7 +245,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
       const res = await fetch(`${API_URL}/api/ai/tags`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief, model_name: "models/gemini-2.5-flash-lite" })
+        body: JSON.stringify({ brief, model_name: "gemini-2.5-flash" })
       })
       const data = await res.json()
       if (data.tags) {

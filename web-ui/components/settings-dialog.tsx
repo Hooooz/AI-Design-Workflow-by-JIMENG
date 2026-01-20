@@ -43,6 +43,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          {/* 
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="model" className="text-right">
               Model
@@ -59,6 +60,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               </SelectContent>
             </Select>
           </div>
+          */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="api-key" className="text-right">
               API Key
