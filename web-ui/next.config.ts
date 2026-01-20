@@ -21,6 +21,13 @@ const nextConfig: NextConfig = {
     if (!apiUrl.startsWith('http://') && !apiUrl.startsWith('https://')) {
         apiUrl = `https://${apiUrl}`;
     }
+
+    // Force HTTPS for non-localhost to avoid 308 Redirects turning POST into GET (causing 405)
+    if (apiUrl.startsWith('http://') && !apiUrl.includes('localhost') && !apiUrl.includes('127.0.0.1')) {
+        apiUrl = apiUrl.replace('http://', 'https://');
+    }
+    
+    console.log('Final API Destination:', apiUrl);
     
     return [
       {
