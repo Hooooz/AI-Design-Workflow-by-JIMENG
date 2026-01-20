@@ -1,28 +1,19 @@
 # Use Python 3.10 slim image
 FROM python:3.10-slim
 
-# Set working directory to the image-gen-server folder
-WORKDIR /app/test_workspace/image-gen-server
+# Build context is root, so we need to copy from test_workspace/image-gen-server/
+WORKDIR /app
+
+# Copy image-gen-server directory
+COPY test_workspace/image-gen-server/ .
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements file
-COPY requirements.txt .
+    && rm -rf /var/lib/apt-lists/*
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Debug: List files before copy
-RUN echo "=== Debug: Files in current directory ===" && ls -la
-
-# Copy the rest of the application
-COPY . .
-
-# Debug: List files after copy
-RUN echo "=== Debug: Files after COPY ===" && ls -la
 
 # Expose the port
 EXPOSE 8080
