@@ -1,0 +1,24 @@
+{
+  "$schema": "https://railway.app/schema.json",
+  "name": "image-gen-server",
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "deploy": {
+    "startCommand": "uvicorn server:app --host 0.0.0.0 --port $PORT",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 30,
+    "restartPolicy": "ON_FAILURE",
+    "maxRetries": 3
+  },
+  "environments": {
+    "preview": {
+      "build": {
+        "builder": "NIXPACKS"
+      },
+      "deploy": {
+        "startCommand": "uvicorn server:app --host 0.0.0.0 --port $PORT"
+      }
+    }
+  }
+}
