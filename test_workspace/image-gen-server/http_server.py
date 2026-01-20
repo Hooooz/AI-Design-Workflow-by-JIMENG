@@ -5,19 +5,15 @@
 
 import os
 import sys
-import json
 import time
 import base64
 import logging
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional
 
 # 添加代理路径
-sys.path.insert(0, str(Path(__file__).parent / "proxy"))
-from proxy.jimeng import generate_images as jimeng_generate
+proxy_path = str(Path(__file__).parent / "proxy")
+if proxy_path not in sys.path:
+    sys.path.insert(0, proxy_path)
 
 # 配置
 JIMENG_API_TOKEN = os.getenv("JIMENG_API_TOKEN", "881abd7d55218d875202db7510cdafbb")
@@ -31,6 +27,24 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# 延迟导入，避免启动时失败
+_jimeng_generate = None
+_import_error = None
+
+try:
+    from proxy.jimeng import generate_images as _jimeng_generate
+
+    logger.info("✅ 即梦模块导入成功")
+except Exception as e:
+    _import_error = str(e)
+    logger.error(f"❌ 即梦模块导入失败: {e}")
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import Optional
+import uvicorn
 
 app = FastAPI(title="Image Gen Server")
 
@@ -57,12 +71,30 @@ class GenerateResponse(BaseModel):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    """健康检查"""
+    if _import_error:
+        return {"status": "error", "message": _import_error}
+    return {"status": "ok", "import_error": None}
+
+
+@app.on_event("startup")
+async def startup():
+    """服务启动时检查"""
+    if _import_error:
+        logger.error(f"启动警告: {_import_error}")
+    else:
+        logger.info("🚀 图片服务启动成功")
 
 
 @app.post("/generate", response_model=GenerateResponse)
 async def generate_image(req: GenerateRequest):
     """生成图片"""
+    if _import_error:
+        return GenerateResponse(success=False, message=f"模块未加载: {_import_error}")
+
+    if not _jimeng_generate:
+        return GenerateResponse(success=False, message="生成函数未初始化")
+
     try:
         logger.info(f"收到生成请求: {req.prompt[:50]}...")
 
@@ -70,7 +102,7 @@ async def generate_image(req: GenerateRequest):
         os.makedirs(save_folder, exist_ok=True)
 
         # 调用即梦生成
-        result = jimeng_generate(
+        result = _jimeng_generate(
             prompt=req.prompt,
             file_name=req.file_name,
             save_folder=save_folder,
@@ -93,10 +125,16 @@ async def generate_image_sync(
     prompt: str, file_name: str, save_folder: str = OUTPUT_FOLDER
 ):
     """同步生成图片（兼容旧接口）"""
+    if _import_error:
+        return {"success": False, "message": f"模块未加载: {_import_error}"}
+
+    if not _jimeng_generate:
+        return {"success": False, "message": "生成函数未初始化"}
+
     try:
         os.makedirs(save_folder, exist_ok=True)
 
-        result = jimeng_generate(
+        result = _jimeng_generate(
             prompt=prompt,
             file_name=file_name,
             save_folder=save_folder,
@@ -104,7 +142,6 @@ async def generate_image_sync(
         )
 
         if result and os.path.exists(result):
-            # 返回 base64 图片
             with open(result, "rb") as f:
                 img_base64 = base64.b64encode(f.read()).decode()
 
@@ -123,7 +160,5 @@ async def generate_image_sync(
 
 
 if __name__ == "__main__":
-    import uvicorn
-
     port = int(os.getenv("PORT", "8080"))
     uvicorn.run(app, host="0.0.0.0", port=port)

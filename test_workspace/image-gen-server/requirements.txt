@@ -6,3 +6,6 @@ fastmcp==0.4.1
 mcp==1.2.1
 brotlipy>=0.7.0
 brotli==1.1.0
+fastapi>=0.100.0
+uvicorn>=0.23.0
+pydantic>=2.0.0
