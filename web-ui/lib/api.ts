@@ -92,7 +92,7 @@ export const projectApi = {
   getOne: (name: string) => api.get<Project>(`/api/project/${encodeURIComponent(name)}`),
   create: (data: { project_name: string; brief: string }) =>
     api.post<{ status: string; project_name: string }>('/api/workflow/run_all', data),
-  export: (name: string) => `http://localhost:8000/api/project/${encodeURIComponent(name)}/export`,
+  export: (name: string) => `/api/project/${encodeURIComponent(name)}/export`,
 }
 
 export const aiApi = {

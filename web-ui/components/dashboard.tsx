@@ -83,7 +83,10 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
     images: []
   })
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  // Use relative path to leverage Next.js Rewrites (proxy)
+  // This avoids CORS and Mixed Content issues by making the request to the same origin (Vercel)
+  // which then proxies to the backend defined in next.config.ts
+  const API_URL = ""
 
   const [tags, setTags] = useState<string[]>([])
   const [isAutocompleteLoading, setIsAutocompleteLoading] = useState(false)
@@ -544,7 +547,9 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                 img: ({ node, ...props }) => {
                     const src = typeof props.src === 'string' ? props.src : '';
                     const isRelative = src && !src.startsWith('http') && !src.startsWith('https') && !src.startsWith('/');
-                    const finalSrc = isRelative ? `${API_URL}/projects/${project}/${src}` : src;
+                    // If src is relative path like "image.jpg", prepend project path
+                    // If API_URL is empty (proxy mode), the final path will be /projects/... which Next.js rewrites handle
+                    const finalSrc = isRelative ? `/projects/${project}/${src}` : src;
                     return (
                         <span className="block my-10 flex flex-col items-center gap-3">
                             <img 
