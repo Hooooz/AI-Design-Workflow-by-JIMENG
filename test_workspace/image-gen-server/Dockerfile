@@ -15,4 +15,4 @@ COPY . .
 EXPOSE 8080
 
 # Start the HTTP server
-CMD ["uv", "run", "uvicorn", "http_server:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD sh -c "uv run uvicorn http_server:app --host 0.0.0.0 --port $PORT"
