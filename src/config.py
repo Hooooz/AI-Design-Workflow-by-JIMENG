@@ -10,11 +10,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 if not OPENAI_API_KEY:
     if ENV == "production":
-        # 生产环境严格要求配置
-        raise ValueError(
-            "❌ 错误: 未找到 OPENAI_API_KEY 环境变量！\n"
-            "生产环境必须通过环境变量配置 API Key。"
-        )
+        # 生产环境严格要求配置，但用户要求暂时放开使用测试 Key
+        print("⚠️ 警告: 生产环境使用了硬编码的测试 Key (用户要求)")
+        OPENAI_API_KEY = "sk-C66yMy0MUM_n0vPU4PgCF_mtzNYsYYfY3YmgZsBlhqIS0oq6"
     else:
         # 开发环境使用兜底 Key（仅限本地调试）
         OPENAI_API_KEY = os.getenv(

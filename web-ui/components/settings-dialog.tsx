@@ -43,7 +43,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          {/* 
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="model" className="text-right">
               Model
@@ -54,13 +53,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</SelectItem>
+                <SelectItem value="gemini-2.5-flash">Gemini 2.5 Flash</SelectItem>
                 <SelectItem value="gemini-2.0-flash-exp">Gemini 2.0 Flash Exp</SelectItem>
-                <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="api-key" className="text-right">
               API Key
