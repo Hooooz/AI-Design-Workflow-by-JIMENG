@@ -15,8 +15,14 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Debug: List files before copy
+RUN echo "=== Debug: Files in current directory ===" && ls -la
+
 # Copy the rest of the application
 COPY . .
+
+# Debug: List files after copy
+RUN echo "=== Debug: Files after COPY ===" && ls -la
 
 # Expose the port
 EXPOSE 8080
