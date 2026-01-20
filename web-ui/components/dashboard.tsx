@@ -787,71 +787,87 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
     // UI Optimization: Transform standard Markdown into Cards for Market/Visual tabs
     // This allows them to look like the "Solution" tab even without JSON structure
     if (["market_analysis", "visual_research"].includes(activeTab)) {
-        // Split by H2 (## ) to create sections
-        // We use a regex that matches ## followed by space, and capture the content
-        const sections = processedContent.split(/(?=^##\s)/m);
+        // 1. Determine separator (H2 or H3) based on content availability
+        // Priority: H2 (##) -> H3 (###)
+        const hasH2 = /^##\s/m.test(processedContent);
+        const splitRegex = hasH2 ? /(?=^##\s)/m : /(?=^###\s)/m;
         
-        // Filter out empty sections
+        // 2. Split content into sections
+        const sections = processedContent.split(splitRegex);
+        
+        // 3. Filter out empty sections
         const nonEmptySections = sections.filter(s => s.trim().length > 0);
         
         if (nonEmptySections.length > 0) {
-            // The first section might be intro (if it doesn't start with ##) or the first card
+            // The first section might be intro (if it doesn't start with the separator)
             let intro = "";
-            let cardsContent = nonEmptySections;
+            let rawCards = nonEmptySections;
             
-            if (!nonEmptySections[0].trim().startsWith("##")) {
+            // Check if the first section is actually a header section
+            const firstSectionRaw = nonEmptySections[0].trim();
+            const headerPrefix = hasH2 ? "## " : "### ";
+            
+            if (!firstSectionRaw.startsWith(headerPrefix)) {
                 intro = nonEmptySections[0];
-                cardsContent = nonEmptySections.slice(1);
+                rawCards = nonEmptySections.slice(1);
             }
 
-            return (
-                <div className="space-y-12 animate-in fade-in duration-500">
-                    {/* Intro/Core Idea Section */}
-                    {intro && (
-                        <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-zinc-950 p-8 rounded-3xl shadow-xl text-white relative overflow-hidden">
-                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
-                             <div className="relative z-10">
-                                 <h4 className="flex items-center gap-3 text-white/60 font-bold mb-4 text-xs uppercase tracking-widest">
-                                     <Sparkles className="h-4 w-4" /> 
-                                     {activeTab === "market_analysis" ? "市场洞察摘要" : "视觉研究摘要"}
-                                 </h4>
-                                 <div className="text-base md:text-lg font-medium leading-relaxed opacity-90 prose prose-invert max-w-none">
-                                     <MarkdownRenderer>{intro}</MarkdownRenderer>
-                                 </div>
-                             </div>
-                        </div>
-                    )}
+            // 4. Parse and Clean Cards Data
+            const cardsData = rawCards.map(section => {
+                const lines = section.trim().split('\n');
+                const titleLine = lines[0];
+                const contentBody = lines.slice(1).join('\n').trim();
+                
+                // Clean title: remove hashes, bold markers, colons
+                const title = titleLine
+                    .replace(/^(#{2,3})\s+/, '') // Remove ## or ###
+                    .replace(/\*\*/g, '')        // Remove **
+                    .replace(/[:：]/g, '')        // Remove colons
+                    .trim();
 
-                    {/* Content Cards Grid */}
-                    {cardsContent.length > 0 && (
+                return { title, content: contentBody };
+            }).filter(card => card.content.length > 0); // Ensure content is not empty
+
+            if (cardsData.length > 0) {
+                return (
+                    <div className="space-y-12 animate-in fade-in duration-500">
+                        {/* Intro/Core Idea Section */}
+                        {intro && (
+                            <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-zinc-950 p-8 rounded-3xl shadow-xl text-white relative overflow-hidden">
+                                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                                 <div className="relative z-10">
+                                     <h4 className="flex items-center gap-3 text-white/60 font-bold mb-4 text-xs uppercase tracking-widest">
+                                         <Sparkles className="h-4 w-4" /> 
+                                         {activeTab === "market_analysis" ? "市场洞察摘要" : "视觉研究摘要"}
+                                     </h4>
+                                     <div className="text-base md:text-lg font-medium leading-relaxed opacity-90 prose prose-invert max-w-none">
+                                         <MarkdownRenderer>{intro}</MarkdownRenderer>
+                                     </div>
+                                 </div>
+                            </div>
+                        )}
+
+                        {/* Content Cards Grid */}
                         <div className="grid gap-8 md:grid-cols-1"> 
-                            {cardsContent.map((section, i) => {
-                                // Extract title from ## Title
-                                const lines = section.trim().split('\n');
-                                const titleLine = lines[0];
-                                const contentBody = lines.slice(1).join('\n');
-                                const title = titleLine.replace(/^##\s+/, '').trim();
-                                
-                                return (
-                                    <div key={i} className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col">
-                                        <div className="p-8 md:p-10 flex-1">
-                                            <h3 className="text-2xl font-display font-bold text-zinc-900 dark:text-white mb-6 flex items-center gap-3">
-                                                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm font-bold text-zinc-500">
-                                                    {i + 1}
-                                                </span>
-                                                {title}
-                                            </h3>
-                                            <div className="prose prose-zinc prose-lg max-w-none dark:prose-invert">
-                                                 <MarkdownRenderer>{contentBody}</MarkdownRenderer>
-                                            </div>
+                            {cardsData.map((card, i) => (
+                                <div key={i} className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col">
+                                    <div className="p-8 md:p-10 flex-1">
+                                        <h3 className="text-2xl font-display font-bold text-zinc-900 dark:text-white mb-6 flex items-center gap-3">
+                                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm font-bold text-zinc-500">
+                                                {i + 1}
+                                            </span>
+                                            {card.title}
+                                        </h3>
+                                        <div className="prose prose-zinc prose-lg max-w-none dark:prose-invert">
+                                             <MarkdownRenderer>{card.content}</MarkdownRenderer>
                                         </div>
                                     </div>
-                                );
-                            })}
+                                </div>
+                            ))}
                         </div>
-                    )}
-                </div>
-            );
+                    </div>
+                );
+            }
         }
     }
 
