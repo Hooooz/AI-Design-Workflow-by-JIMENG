@@ -584,23 +584,23 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
             // Fallback: If no prompts, render raw content
             if (!prompts || prompts.length === 0) {
                  return (
-                    <div className="prose prose-zinc prose-lg max-w-none dark:prose-invert">
-                        <MarkdownRenderer>{processedContent}</MarkdownRenderer>
-                    </div>
-                )
+                     <div className="prose prose-zinc prose-sm max-w-none dark:prose-invert">
+                         <MarkdownRenderer>{processedContent}</MarkdownRenderer>
+                     </div>
+                 )
             }
 
             return (
-                <div className="space-y-12 animate-in fade-in duration-500">
+                <div className="space-y-6 animate-in fade-in duration-500">
                     {/* Core Idea Section */}
                     {coreIdea && (
-                        <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-zinc-950 p-8 rounded-3xl shadow-xl text-white relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                        <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-zinc-950 p-5 rounded-xl shadow-lg text-white relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -mr-16 -mt-16"></div>
                             <div className="relative z-10">
-                                <h4 className="flex items-center gap-3 text-white/60 font-bold mb-4 text-xs uppercase tracking-widest">
-                                    <Sparkles className="h-4 w-4" /> 提案核心策略
+                                <h4 className="flex items-center gap-2 text-white/60 font-bold mb-3 text-[10px] uppercase tracking-widest">
+                                    <Sparkles className="h-3 w-3" /> 提案核心策略
                                 </h4>
-                                <p className="text-base md:text-lg font-medium leading-relaxed opacity-90">
+                                <p className="text-sm md:text-base font-medium leading-relaxed opacity-90">
                                     {coreIdea}
                                 </p>
                             </div>
@@ -608,45 +608,45 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                     )}
 
                     {/* Proposals Grid */}
-                    <div className="grid gap-12">
+                    <div className="grid gap-6">
                         {prompts.map((item: ProposalItem, i: number) => (
-                            <div key={i} className="group relative bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
+                            <div key={i} className="group relative bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
                                 <div className="grid md:grid-cols-2 gap-0 h-full">
                                     {/* Left: Image */}
-                                    <div className="relative h-[400px] md:h-auto bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                                    <div className="relative h-[300px] md:h-auto bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
                                         {item.image_path ? (
                                             <img 
                                                 src={`${API_URL}${item.image_path}`} 
                                                 alt={item.scheme || item.concept || `Proposal ${i+1}`}
-                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                             />
                                         ) : (
                                             <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400">
-                                                <ImageIcon className="h-12 w-12 mb-4 opacity-20" />
-                                                <p className="text-xs uppercase tracking-widest">等待绘图生成...</p>
+                                                <ImageIcon className="h-8 w-8 mb-3 opacity-20" />
+                                                <p className="text-[10px] uppercase tracking-widest">等待绘图生成...</p>
                                             </div>
                                         )}
-                                        <div className="absolute top-4 left-4 bg-white/90 dark:bg-zinc-900/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                                        <div className="absolute top-3 left-3 bg-white/90 dark:bg-zinc-900/90 backdrop-blur px-2.5 py-1 rounded-full text-[10px] font-bold shadow-sm">
                                             方案 0{i + 1}
                                         </div>
                                     </div>
 
                                     {/* Right: Content */}
-                                    <div className="p-8 md:p-10 flex flex-col h-full">
-                                        <div className="mb-6">
-                                            <h3 className="text-2xl font-display font-bold text-zinc-900 dark:text-white mb-2">
+                                    <div className="p-4 md:p-5 flex flex-col h-full">
+                                        <div className="mb-4">
+                                            <h3 className="text-lg font-display font-bold text-zinc-900 dark:text-white mb-2">
                                                 {item.scheme || item.concept || `方案 ${i+1}`}
                                             </h3>
-                                            <div className="h-1 w-12 bg-zinc-900 dark:bg-white rounded-full"></div>
+                                            <div className="h-0.5 w-10 bg-zinc-900 dark:bg-white rounded-full"></div>
                                         </div>
 
-                                        <div className="space-y-6 flex-1">
+                                        <div className="space-y-4 flex-1">
                                             {item.inspiration && (
                                                 <div>
-                                                    <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 flex items-center gap-2">
+                                                    <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1.5 flex items-center gap-2">
                                                         <Zap className="h-3 w-3" /> 创意源泉
                                                     </h5>
-                                                    <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                                                    <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
                                                         {item.inspiration}
                                                     </p>
                                                 </div>
@@ -654,10 +654,10 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                             
                                             {item.description && (
                                                 <div>
-                                                    <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 flex items-center gap-2">
+                                                    <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1.5 flex items-center gap-2">
                                                         <FileText className="h-3 w-3" /> 设计故事
                                                     </h5>
-                                                    <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                                                    <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
                                                         {item.description}
                                                     </p>
                                                 </div>
@@ -665,10 +665,10 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
 
                                             {item.cmf && (
                                                 <div>
-                                                    <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 flex items-center gap-2">
+                                                    <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-1.5 flex items-center gap-2">
                                                         <Palette className="h-3 w-3" /> CMF 定义
                                                     </h5>
-                                                    <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                                                    <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
                                                         {item.cmf}
                                                     </p>
                                                 </div>
@@ -676,15 +676,15 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                         </div>
 
                                         {item.prompt && (
-                                            <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
-                                                <div className="flex items-center justify-between mb-3">
+                                            <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                                                <div className="flex items-center justify-between mb-2">
                                                     <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
                                                         <Code className="h-3 w-3" /> 绘图 Prompt
                                                     </span>
                                                     <Button 
                                                         variant="ghost" 
                                                         size="sm" 
-                                                        className="h-6 text-[10px] hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                                        className="h-5 text-[10px] hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                                         onClick={() => {
                                                             if (item.prompt) {
                                                                 navigator.clipboard.writeText(item.prompt);
@@ -712,14 +712,14 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
         }
 
         return (
-            <div className="space-y-8 animate-in fade-in duration-500">
+            <div className="space-y-5 animate-in fade-in duration-500">
                 {/* Summary Section */}
                 {parsedData.summary && (
-                    <div className="bg-emerald-50 dark:bg-emerald-950/30 p-6 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 shadow-sm">
-                        <h4 className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold mb-3 text-sm uppercase tracking-wider">
-                            <Sparkles className="h-4 w-4" /> 核心摘要
+                    <div className="bg-emerald-50 dark:bg-emerald-950/30 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50 shadow-sm">
+                        <h4 className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold mb-2 text-xs uppercase tracking-wider">
+                            <Sparkles className="h-3 w-3" /> 核心摘要
                         </h4>
-                        <p className="text-emerald-900 dark:text-emerald-100 text-base leading-relaxed font-medium">
+                        <p className="text-emerald-900 dark:text-emerald-100 text-sm leading-relaxed font-medium">
                             {parsedData.summary}
                         </p>
                     </div>
@@ -727,41 +727,41 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                 
                 {/* Main Content */}
                 {parsedData.content && (
-                    <div className="prose prose-zinc prose-lg max-w-none dark:prose-invert 
+                    <div className="prose prose-zinc prose-sm max-w-none dark:prose-invert 
                         prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight 
-                        prose-h1:text-4xl prose-h1:mb-8 prose-h1:pb-4 prose-h1:border-b prose-h1:border-zinc-100 dark:prose-h1:border-zinc-800
-                        prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:flex prose-h2:items-center
-                        prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-p:leading-relaxed prose-p:mb-6
-                        prose-li:text-zinc-600 dark:prose-li:text-zinc-400 prose-li:mb-2
+                        prose-h1:text-2xl prose-h1:mb-5 prose-h1:pb-3 prose-h1:border-b prose-h1:border-zinc-100 dark:prose-h1:border-zinc-800
+                        prose-h2:text-lg prose-h2:mt-8 prose-h2:mb-4 prose-h2:flex prose-h2:items-center
+                        prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-p:leading-relaxed prose-p:mb-4
+                        prose-li:text-zinc-600 dark:prose-li:text-zinc-400 prose-li:mb-1
                         prose-strong:text-zinc-900 dark:prose-strong:text-white
-                        prose-th:bg-zinc-50 dark:prose-th:bg-zinc-800 prose-th:px-4 prose-th:py-3 prose-th:text-xs prose-th:font-bold prose-th:uppercase prose-th:tracking-wider
-                        prose-td:px-4 prose-td:py-3 prose-td:text-sm prose-td:border-t prose-td:border-zinc-100 dark:prose-td:border-zinc-800">
+                        prose-th:bg-zinc-50 dark:prose-th:bg-zinc-800 prose-th:px-3 prose-th:py-2 prose-th:text-[10px] prose-th:font-bold prose-th:uppercase prose-th:tracking-wider
+                        prose-td:px-3 prose-td:py-2 prose-td:text-xs prose-td:border-t prose-td:border-zinc-100 dark:prose-td:border-zinc-800">
                         <MarkdownRenderer>{fixMarkdownFormat(parsedData.content.replace(/\\n/g, '\n'))}</MarkdownRenderer>
                     </div>
                 )}
                 
                 {/* Prompts/Visuals Section */}
                 {(parsedData.visuals || parsedData.prompts) && (
-                    <div className="space-y-6 pt-8 border-t border-zinc-200 dark:border-zinc-800">
-                        <h3 className="text-xl font-display font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                             <ImageIcon className="h-5 w-5 text-zinc-500" /> 
+                    <div className="space-y-4 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+                        <h3 className="text-base font-display font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                             <ImageIcon className="h-4 w-4 text-zinc-500" /> 
                              视觉方案与提示词
                         </h3>
-                        <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid gap-3 md:grid-cols-2">
                             {(parsedData.visuals || parsedData.prompts).map((item: ProposalItem, i: number) => (
-                                <div key={i} className="bg-zinc-50 dark:bg-zinc-900/50 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors group">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-800 text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                                <div key={i} className="bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-lg border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors group">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="flex items-center justify-center w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-[10px] font-bold text-zinc-600 dark:text-zinc-400">
                                             {i + 1}
                                         </span>
-                                        <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">
+                                        <span className="font-bold text-zinc-900 dark:text-zinc-100 text-xs">
                                             {item.concept || item.scheme || `方案 ${i+1}`}
                                         </span>
                                     </div>
                                     
                                     {/* Image Display if available */}
                                     {item.image_path && (
-                                        <div className="mb-4 aspect-square overflow-hidden rounded-lg bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800">
+                                        <div className="mb-3 aspect-square overflow-hidden rounded-md bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800">
                                             <img 
                                                 src={`${API_URL}${item.image_path}`} 
                                                 alt={item.concept || "Generated Image"}
@@ -830,16 +830,16 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
 
             if (cardsData.length > 0) {
                 return (
-                    <div className="space-y-12 animate-in fade-in duration-500">
+                    <div className="space-y-6 animate-in fade-in duration-500">
                         {/* Intro/Core Idea Section */}
                         {intro && (
                             <div className="text-white relative overflow-hidden">
                                  <div className="relative z-10">
-                                     <h4 className="flex items-center gap-3 font-bold mb-4 text-xs uppercase tracking-widest text-white/60">
-                                         <Sparkles className="h-4 w-4" /> 
+                                     <h4 className="flex items-center gap-2 font-bold mb-3 text-[10px] uppercase tracking-widest text-white/60">
+                                         <Sparkles className="h-3 w-3" /> 
                                          {activeTab === "market_analysis" ? "市场洞察摘要" : "视觉研究摘要"}
                                      </h4>
-                                     <div className="text-base md:text-lg font-medium leading-relaxed opacity-90 prose prose-invert max-w-none">
+                                     <div className="text-sm md:text-base font-medium leading-relaxed opacity-90 prose prose-invert prose-sm max-w-none">
                                          <MarkdownRenderer>{intro}</MarkdownRenderer>
                                      </div>
                                  </div>
@@ -847,18 +847,18 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                         )}
 
                         {/* Content Cards Grid */}
-                        <div className="grid gap-8 md:grid-cols-1"> 
+                        <div className="grid gap-5 md:grid-cols-1"> 
                             {cardsData.map((card, i) => (
-                                <div key={i} className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 flex flex-col">
-                                    <div className="p-8 md:p-10 flex-1">
-                                        <h3 className="text-2xl font-display font-bold text-zinc-900 dark:text-white mb-6 flex items-center gap-3">
-                                            <span className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 text-sm font-bold text-zinc-500">
+                                <div key={i} className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col">
+                                    <div className="p-4 md:p-5 flex-1">
+                                        <h3 className="text-base font-display font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
+                                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-bold text-zinc-500">
                                                 {i + 1}
                                             </span>
                                             {card.title}
                                         </h3>
-                                        <div className="prose prose-zinc prose-lg max-w-none dark:prose-invert">
-                                             <MarkdownRenderer>{card.content}</MarkdownRenderer>
+                                        <div className="prose prose-zinc prose-sm max-w-none dark:prose-invert">
+                                              <MarkdownRenderer>{card.content}</MarkdownRenderer>
                                         </div>
                                     </div>
                                 </div>
@@ -872,15 +872,15 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
 
     // Default Markdown Rendering (for non-JSON content)
     return (
-        <div className="prose prose-zinc prose-lg max-w-none dark:prose-invert 
+        <div className="prose prose-zinc prose-sm max-w-none dark:prose-invert 
             prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight 
-            prose-h1:text-4xl prose-h1:mb-8 prose-h1:pb-4 prose-h1:border-b prose-h1:border-zinc-100 dark:prose-h1:border-zinc-800
-            prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:flex prose-h2:items-center
-            prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-p:leading-relaxed prose-p:mb-6
-            prose-li:text-zinc-600 dark:prose-li:text-zinc-400 prose-li:mb-2
+            prose-h1:text-2xl prose-h1:mb-5 prose-h1:pb-3 prose-h1:border-b prose-h1:border-zinc-100 dark:prose-h1:border-zinc-800
+            prose-h2:text-lg prose-h2:mt-8 prose-h2:mb-4 prose-h2:flex prose-h2:items-center
+            prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-p:leading-relaxed prose-p:mb-4
+            prose-li:text-zinc-600 dark:prose-li:text-zinc-400 prose-li:mb-1
             prose-strong:text-zinc-900 dark:prose-strong:text-white
-            prose-th:bg-zinc-50 dark:prose-th:bg-zinc-800 prose-th:px-4 prose-th:py-3 prose-th:text-xs prose-th:font-bold prose-th:uppercase prose-th:tracking-wider
-            prose-td:px-4 prose-td:py-3 prose-td:text-sm prose-td:border-t prose-td:border-zinc-100 dark:prose-td:border-zinc-800">
+            prose-th:bg-zinc-50 dark:prose-th:bg-zinc-800 prose-th:px-3 prose-th:py-2 prose-th:text-[10px] prose-th:font-bold prose-th:uppercase prose-th:tracking-wider
+            prose-td:px-3 prose-td:py-2 prose-td:text-xs prose-td:border-t prose-td:border-zinc-100 dark:prose-td:border-zinc-800">
             <MarkdownRenderer>{processedContent}</MarkdownRenderer>
         </div>
     )
