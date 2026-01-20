@@ -681,8 +681,10 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                                         size="sm" 
                                                         className="h-6 text-[10px] hover:bg-zinc-100 dark:hover:bg-zinc-800"
                                                         onClick={() => {
-                                                            navigator.clipboard.writeText(item.prompt);
-                                                            alert("提示词已复制！");
+                                                            if (item.prompt) {
+                                                                navigator.clipboard.writeText(item.prompt);
+                                                                alert("提示词已复制！");
+                                                            }
                                                         }}
                                                     >
                                                         <Copy className="h-3 w-3 mr-1" /> 复制
@@ -1206,8 +1208,10 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                                                 size="sm" 
                                                                 className="h-6 text-[10px] hover:bg-zinc-200 dark:hover:bg-zinc-800"
                                                                 onClick={() => {
-                                                                    navigator.clipboard.writeText(item.prompt);
-                                                                    alert("提示词已复制！");
+                                                                    if (item.prompt) {
+                                                                        navigator.clipboard.writeText(item.prompt);
+                                                                        alert("提示词已复制！");
+                                                                    }
                                                                 }}
                                                             >
                                                                 复制
