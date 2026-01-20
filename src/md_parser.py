@@ -49,20 +49,18 @@ def parse_config_md(file_path):
     
     prompts = {}
     
-    # Market Analyst
-    market_match = re.search(r'### Agent 1:.*?\n```text\n(.*?)\n```', content, re.DOTALL)
-    if market_match:
-        prompts['market_analyst'] = market_match.group(1).strip()
+    # Dynamic parsing of agents
+    # Format: ### Agent X: Name (Key) ...
+    # Be robust to variations like "### Agent: Name (Key)" or "### Agent 1: Name (Key)"
+    agent_pattern = r'### Agent.*?: .*? \((.*?)\).*?\n```text\n(.*?)\n```'
+    
+    for match in re.finditer(agent_pattern, content, re.DOTALL):
+        agent_key_raw = match.group(1)
+        prompt_content = match.group(2).strip()
         
-    # Visual Researcher
-    visual_match = re.search(r'### Agent 2:.*?\n```text\n(.*?)\n```', content, re.DOTALL)
-    if visual_match:
-        prompts['visual_researcher'] = visual_match.group(1).strip()
-        
-    # Product Designer
-    designer_match = re.search(r'### Agent 3:.*?\n```text\n(.*?)\n```', content, re.DOTALL)
-    if designer_match:
-        prompts['product_designer'] = designer_match.group(1).strip()
+        # Support spaces in name like "Variant Generator" -> "variant_generator"
+        agent_key = agent_key_raw.lower().replace(' ', '_')
+        prompts[agent_key] = prompt_content
         
     config['prompts'] = prompts
     

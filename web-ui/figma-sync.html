@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Figma Design Tokens Sync</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .colors-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .color-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+        .color-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .color-swatch {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .color-info {
+            padding: 12px;
+        }
+        .color-name {
+            font-weight: 600;
+            font-size: 13px;
+            margin-bottom: 4px;
+            color: #333;
+        }
+        .color-value {
+            font-family: monospace;
+            font-size: 11px;
+            color: #666;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        .script-area {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .figma-steps {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        .figma-steps h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .step {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+        .step-number {
+            background: #667eea;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .step-content {
+            line-height: 1.5;
+        }
+        .step-content code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Figma Design Tokens Sync</h1>
+            <p>将代码中的设计令牌同步到 Figma 本地样式</p>
+        </div>
+        <div class="content">
+            <div id="status" class="status info">
+                <span>正在加载配置...</span>
+            </div>
+
+            <div id="figma-config" class="hidden">
+                <div class="figma-steps">
+                    <h3>使用说明</h3>
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">点击下方按钮生成 Figma 插件脚本</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">复制生成的脚本代码</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">在 Figma 中打开 <code>Plugins → Development → New Plugin</code></div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">粘贴代码并运行，样式将自动同步</div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="generateScript()">
+                        生成 Figma 插件脚本
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadFromCSS()">
+                        从 CSS 文件加载
+                    </button>
+                </div>
+            </div>
+
+            <div id="colors-section" class="hidden">
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">检测到的颜色令牌</h3>
+                <div id="colors-grid" class="colors-grid"></div>
+            </div>
+
+            <div id="script-section" class="hidden">
+                <h3 style="margin-top: 20px; margin-bottom: 10px;">Figma 插件脚本</h3>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="copyScript()">
+                        复制脚本
+                    </button>
+                    <button class="btn btn-secondary" onclick="selectAll()">
+                        全选
+                    </button>
+                </div>
+                <pre id="script-code" class="script-area"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentScript = '';
+        let currentColors = {};
+
+        async function checkApiStatus() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                return data.status === 'ok';
+            } catch (e) {
+                return false;
+            }
+        }
+
+        async function checkFigmaConfig() {
+            try {
+                const response = await fetch('/api/figma/file-info');
+                const data = await response.json();
+                if (data.error) {
+                    showStatus('Figma 配置未完成: ' + data.message, 'error');
+                    return false;
+                }
+                showStatus('已连接到 Figma 文件: ' + data.name, 'success');
+                return true;
+            } catch (e) {
+                showStatus('无法连接到服务器', 'error');
+                return false;
+            }
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+        }
+
+        async function generateScript() {
+            try {
+                showStatus('正在生成脚本...', 'info');
+                const response = await fetch('/api/figma/sync-from-css');
+                const data = await response.json();
+
+                if (data.error) {
+                    showStatus('错误: ' + data.error, 'error');
+                    return;
+                }
+
+                currentScript = data.script;
+                currentColors = data.colors || {};
+
+                document.getElementById('script-code').textContent = currentScript;
+                document.getElementById('script-section').classList.remove('hidden');
+
+                if (Object.keys(currentColors).length > 0) {
+                    displayColors(currentColors);
+                }
+
+                showStatus('脚本生成成功！', 'success');
+            } catch (e) {
+                showStatus('生成失败: ' + e.message, 'error');
+            }
+        }
+
+        async function loadFromCSS() {
+            await generateScript();
+        }
+
+        function displayColors(colors) {
+            const grid = document.getElementById('colors-grid');
+            grid.innerHTML = '';
+
+            for (const [name, value] of Object.entries(colors)) {
+                const card = document.createElement('div');
+                card.className = 'color-card';
+
+                let swatchStyle = '';
+                let textColor = 'white';
+
+                if (value.startsWith('#')) {
+                    swatchStyle = 'background: ' + value;
+                } else if (value.startsWith('oklch')) {
+                    swatchStyle = 'background: ' + value;
+                }
+
+                card.innerHTML = `
+                    <div class="color-swatch" style="${swatchStyle}; color: ${textColor}">
+                        ${name}
+                    </div>
+                    <div class="color-info">
+                        <div class="color-name">${name}</div>
+                        <div class="color-value">${value}</div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            }
+
+            document.getElementById('colors-section').classList.remove('hidden');
+        }
+
+        function copyScript() {
+            navigator.clipboard.writeText(currentScript).then(() => {
+                showStatus('脚本已复制到剪贴板！', 'success');
+            }).catch(() => {
+                showStatus('复制失败，请手动复制', 'error');
+            });
+        }
+
+        function selectAll() {
+            const code = document.getElementById('script-code');
+            const range = document.createRange();
+            range.selectNode(code);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+        }
+
+        async function init() {
+            const apiOk = await checkApiStatus();
+            if (!apiOk) {
+                showStatus('API 服务未运行，请确保后端服务已启动', 'error');
+                return;
+            }
+
+            const figmaOk = await checkFigmaConfig();
+            document.getElementById('figma-config').classList.remove('hidden');
+        }
+
+        init();
+    </script>
+</body>
+</html>

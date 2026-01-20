@@ -7,51 +7,38 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { FolderOpen, Plus, Settings, ChevronRight, Loader2, Clock, CheckCircle2, CircleDashed } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { SettingsDialog } from "@/components/settings-dialog"
-
-interface ProjectMetadata {
-  project_name: string
-  brief: string
-  creation_time: number
-  status: string
-  tags: string[]
-}
+import { Project } from "@/lib/api"
 
 interface SidebarProps {
   onProjectSelect: (projectName: string | null) => void
   currentProject: string | null
+  projects: Project[]
+  isLoading?: boolean
 }
 
-export function Sidebar({ onProjectSelect, currentProject }: SidebarProps) {
-  const [projects, setProjects] = useState<ProjectMetadata[]>([])
-  const [loading, setLoading] = useState(false)
+export function Sidebar({ onProjectSelect, currentProject, projects, isLoading = false }: SidebarProps) {
   const [showSettings, setShowSettings] = useState(false)
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-
-  const fetchProjects = async () => {
-    try {
-      setLoading(true)
-      const res = await fetch(`${API_URL}/api/projects`)
-      if (res.ok) {
-        const data = await res.json()
-        setProjects(data)
-      }
-    } catch (error) {
-      console.error("Failed to fetch projects", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchProjects()
-  }, [])
+  console.log('[Sidebar Debug] projects:', projects.length, 'isLoading:', isLoading)
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case "completed": return <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-      case "in_progress": return <CircleDashed className="h-3 w-3 text-primary animate-spin" />
+      case "in_progress": 
+      case "pending": return <CircleDashed className="h-3 w-3 text-primary animate-spin" />
       default: return <Clock className="h-3 w-3 text-zinc-400" />
+    }
+  }
+
+  const formatDate = (timestamp: number) => {
+    try {
+      const date = new Date(timestamp * 1000)
+      const year = date.getFullYear()
+      const month = String(date.getMonth() + 1).padStart(2, '0')
+      const day = String(date.getDate()).padStart(2, '0')
+      return `${year}/${month}/${day}`
+    } catch {
+      return ""
     }
   }
 
@@ -83,10 +70,12 @@ export function Sidebar({ onProjectSelect, currentProject }: SidebarProps) {
           <h3 className="mb-4 px-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
             最近项目
           </h3>
-          {loading ? (
+          {isLoading ? (
             <div className="flex justify-center p-4">
               <Loader2 className="h-4 w-4 animate-spin text-zinc-400" />
             </div>
+          ) : projects.length === 0 ? (
+            <p className="text-sm text-zinc-400 px-2">暂无项目</p>
           ) : (
             projects.map((project) => (
               <Button
@@ -106,7 +95,7 @@ export function Sidebar({ onProjectSelect, currentProject }: SidebarProps) {
                   <div className="flex items-center gap-1.5 mt-0.5">
                     {getStatusIcon(project.status)}
                     <span className="text-[10px] opacity-50">
-                      {new Date(project.creation_time * 1000).toLocaleDateString()}
+                      {formatDate(project.creation_time)}
                     </span>
                   </div>
                 </div>

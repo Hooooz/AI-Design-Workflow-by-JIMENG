@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
+import { useToast } from "@/lib/hooks"
 
 interface AuthDialogProps {
   open: boolean
@@ -19,29 +20,41 @@ export function AuthDialog({ open, onOpenChange, onSuccess }: AuthDialogProps) {
   const [loading, setLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [error, setError] = useState("")
+  const { success, error: showError } = useToast()
 
   const handleAuth = async () => {
+    if (!email || !password) {
+      setError("Please enter both email and password")
+      return
+    }
+
     setLoading(true)
     setError("")
+
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { error } = await supabase?.auth.signUp({
           email,
           password,
-        })
+        }) || { error: new Error("Supabase not configured") }
+        
         if (error) throw error
-        alert("Check your email for the confirmation link!")
+        success("Check your email for the confirmation link!")
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error } = await supabase?.auth.signInWithPassword({
           email,
           password,
-        })
+        }) || { error: new Error("Supabase not configured") }
+        
         if (error) throw error
+        success("Welcome back!")
         onSuccess()
         onOpenChange(false)
       }
-    } catch (e: any) {
-      setError(e.message)
+    } catch (e: unknown) {
+      const errorMessage = e instanceof Error ? e.message : "An error occurred"
+      setError(errorMessage)
+      showError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -59,16 +72,39 @@ export function AuthDialog({ open, onOpenChange, onSuccess }: AuthDialogProps) {
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input 
+              id="email" 
+              type="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your@email.com"
+              disabled={loading}
+            />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input 
+              id="password" 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              disabled={loading}
+            />
           </div>
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && (
+            <p className="text-sm text-red-500 bg-red-50 dark:bg-red-950/30 p-2 rounded">
+              {error}
+            </p>
+          )}
         </div>
         <DialogFooter className="flex-col sm:justify-between sm:flex-row gap-2">
-            <Button variant="ghost" onClick={() => setIsSignUp(!isSignUp)} className="text-xs">
+            <Button 
+              variant="ghost" 
+              onClick={() => setIsSignUp(!isSignUp)} 
+              className="text-xs"
+              disabled={loading}
+            >
                 {isSignUp ? "Already have an account? Sign In" : "Don't have an account? Sign Up"}
             </Button>
             <Button onClick={handleAuth} disabled={loading}>

@@ -15,11 +15,27 @@ import {
   Zap,
   LayoutGrid,
   ExternalLink,
-  Share2
+  Share2,
+  Settings,
+  Plus,
+  User,
+  Key,
+  Code,
+  Copy
 } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import remarkBreaks from "remark-breaks"
 import { cn } from "@/lib/utils"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
 interface DashboardProps {
   project: string | null
@@ -27,16 +43,15 @@ interface DashboardProps {
 }
 
 const STEPS = [
-  { id: "market_analysis", label: "市场分析", icon: TrendingUp },
-  { id: "visual_research", label: "视觉调研", icon: Palette },
-  { id: "design_generation", label: "设计提案", icon: Sparkles },
-  { id: "image_generation", label: "创意图库", icon: ImageIcon },
-  { id: "full_report", label: "完整报告", icon: FileText },
+  { id: "market_analysis", label: "市场", icon: TrendingUp },
+  { id: "visual_research", label: "视觉", icon: Palette },
+  { id: "design_generation", label: "方案", icon: Sparkles },
+  { id: "image_generation", label: "图库", icon: ImageIcon },
 ]
 
 export function Dashboard({ project, onProjectCreated }: DashboardProps) {
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState("image_generation")
+  const [activeTab, setActiveTab] = useState("design_generation")
   const [status, setStatus] = useState<string>("pending")
   const [currentStep, setCurrentStep] = useState<string>("")
   const [progress, setProgress] = useState(0)
@@ -61,14 +76,47 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
   const [isAutocompleteLoading, setIsAutocompleteLoading] = useState(false)
   const [isTagsLoading, setIsTagsLoading] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  
+  // Settings State
+  const [userPersona, setUserPersona] = useState("")
+  const [jimengSessionId, setJimengSessionId] = useState("")
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [imageCount, setImageCount] = useState(4)
+  const [appendCount, setAppendCount] = useState(4)
+  const [isGeneratingMore, setIsGeneratingMore] = useState(false)
+  
+  // Ref for polling interval
+  const pollIntervalRef = useState<{ current: NodeJS.Timeout | null }>({ current: null })[0]
+
+  // Load settings from local storage
+  useEffect(() => {
+    const savedPersona = localStorage.getItem("userPersona")
+    const savedSessionId = localStorage.getItem("jimengSessionId")
+    if (savedPersona) setUserPersona(savedPersona)
+    if (savedSessionId) setJimengSessionId(savedSessionId)
+  }, [])
+
+  // Save settings
+  const saveSettings = () => {
+      localStorage.setItem("userPersona", userPersona)
+      localStorage.setItem("jimengSessionId", jimengSessionId)
+      setSettingsOpen(false)
+  }
 
   // Load Project Data
   useEffect(() => {
+    let isMounted = true
+
     if (project) {
       setLoading(true)
+      // Reset status to pending to show loading state immediately while fetching
+      setStatus("pending") 
+      
       fetch(`${API_URL}/api/project/${project}`)
         .then(res => res.json())
         .then(projectData => {
+          if (!isMounted) return
+
           setProjectName(projectData.metadata.project_name)
           setBrief(projectData.metadata.brief)
           setStatus(projectData.metadata.status)
@@ -82,16 +130,24 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
             images: projectData.images
           })
           
-          // 修复：只有在当前项目确实需要刷新时才调用回调
-          // 避免在切换项目时强制跳转回运行中的任务
-          if (projectData.metadata.status === "in_progress" && project === projectData.metadata.project_name) {
-             // 使用更智能的轮询机制而不是强制跳转
-             const pollInterval = setInterval(() => {
+          if ((projectData.metadata.status === "in_progress" || projectData.metadata.status === "pending") && project === projectData.metadata.project_name) {
+             // Clear any existing interval
+             if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+             
+             pollIntervalRef.current = setInterval(() => {
                fetch(`${API_URL}/api/project/${project}`)
                  .then(res => res.json())
                  .then(updatedData => {
+                   if (!isMounted) return
+
                    setStatus(updatedData.metadata.status)
                    setCurrentStep(updatedData.metadata.current_step)
+                   
+                   // Auto-switch tab based on current step
+                   if (updatedData.metadata.current_step && STEPS.some(s => s.id === updatedData.metadata.current_step)) {
+                       setActiveTab(updatedData.metadata.current_step)
+                   }
+                   
                    setData(prev => ({
                      ...prev,
                      market_analysis: updatedData.market_analysis,
@@ -101,24 +157,22 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                      images: updatedData.images
                    }))
                    
-                   if (updatedData.metadata.status !== "in_progress") {
-                     clearInterval(pollInterval)
+                   if (updatedData.metadata.status !== "in_progress" && updatedData.metadata.status !== "pending") {
+                     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
                    }
                  })
                  .catch(err => {
                    console.error("轮询失败:", err)
-                   clearInterval(pollInterval)
+                   if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
                  })
-             }, 2000) // 每2秒轮询一次
-             
-             // 清理函数
-             return () => clearInterval(pollInterval)
-          }
+             }, 2000)
+           }
         })
         .catch(err => console.error(err))
-        .finally(() => setLoading(false))
+        .finally(() => {
+             if (isMounted) setLoading(false)
+        })
     } else {
-      // Reset for new project
       setData({
         market_analysis: "",
         visual_research: "",
@@ -129,23 +183,43 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
       setStatus("pending")
       setTags(["工业设计", "概念方案"])
     }
+
+    return () => {
+      isMounted = false
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+    }
   }, [project])
 
   const handleAutocomplete = async () => {
     if (!brief) return
     setIsAutocompleteLoading(true)
+    // Clear brief to show streaming effect from start (optional, maybe better to append or replace)
+    // setBrief("") 
     try {
-      const res = await fetch(`${API_URL}/api/ai/autocomplete`, {
+      const res = await fetch(`${API_URL}/api/ai/autocomplete/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief, model_name: "gemini-2.5-flash-lite" })
+        body: JSON.stringify({ brief, model_name: "models/gemma-3-12b-it" })
       })
-      const data = await res.json()
-      if (data.expanded_brief) {
-        setBrief(data.expanded_brief)
+
+      if (!res.body) throw new Error("No response body")
+      
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let done = false
+      let text = ""
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read()
+        done = doneReading
+        const chunkValue = decoder.decode(value, { stream: true })
+        text += chunkValue
+        setBrief(text)
       }
+      
     } catch (e) {
-      console.error(e)
+      console.error("AI创意补全失败:", e)
+      alert("AI创意补全失败，请检查网络连接")
     } finally {
       setIsAutocompleteLoading(false)
     }
@@ -158,14 +232,15 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
       const res = await fetch(`${API_URL}/api/ai/tags`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief, model_name: "gemini-2.5-flash-lite" })
+        body: JSON.stringify({ brief, model_name: "models/gemini-2.5-flash-lite" })
       })
       const data = await res.json()
       if (data.tags) {
         setTags(data.tags)
       }
     } catch (e) {
-      console.error(e)
+      console.error("推荐标签失败:", e)
+      alert("推荐标签失败，请检查网络连接")
     } finally {
       setIsTagsLoading(false)
     }
@@ -190,12 +265,49 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
     alert("链接已复制到剪贴板！") 
   }
 
+  const handleGenerateMore = async () => {
+    if (!project) return
+    setIsGeneratingMore(true)
+    try {
+        const res = await fetch(`${API_URL}/api/workflow/generate-images`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                project_name: projectName,
+                count: appendCount, 
+                model_name: modelName,
+                settings: {
+                    persona: userPersona,
+                    jimeng_session_id: jimengSessionId
+                }
+            })
+        })
+        const result = await res.json()
+        if (result.status === "success") {
+            // Reload project to get images
+            const projRes = await fetch(`${API_URL}/api/project/${project}`)
+            const projData = await projRes.json()
+            setData(prev => ({ ...prev, images: projData.images }))
+        }
+    } catch (e) {
+        console.error(e)
+        alert("生成更多图片失败，请检查控制台日志")
+    } finally {
+        setIsGeneratingMore(false)
+    }
+  }
+
   const runStep = async (stepId: string) => {
     setLoading(true)
     setStatus("in_progress")
     setCurrentStep(stepId)
     try {
-      const res = await fetch(`${API_URL}/api/workflow/step`, {
+      // 检查是否可以使用流式接口（目前除了 image_generation 和 full_report 外都支持）
+      const useStream = ["market_analysis", "visual_research", "design_generation"].includes(stepId)
+      
+      const endpoint = useStream ? `${API_URL}/api/workflow/step/stream` : `${API_URL}/api/workflow/step`
+      
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -208,27 +320,57 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
             visual_research: data.visual_research,
             design_proposals: data.design_proposals,
             design_prompts: data.design_proposals, // 修复：为image_generation步骤提供正确的键名
+          },
+          settings: {
+            image_count: imageCount,
+            persona: userPersona,
+            jimeng_session_id: jimengSessionId
           }
         })
       })
       
-      const result = await res.json()
-      if (result.status === "success") {
-        if (stepId === "image_generation") {
-          // Reload project to get images
-          if (project) {
-             const projRes = await fetch(`${API_URL}/api/project/${project}`)
-             const projData = await projRes.json()
-             setData(prev => ({ ...prev, images: projData.images }))
-          }
-        } else {
-          setData(prev => ({ ...prev, [stepId]: result.result }))
+      if (useStream) {
+        if (!res.body) throw new Error("No response body")
+        const reader = res.body.getReader()
+        const decoder = new TextDecoder()
+        let done = false
+        let text = ""
+        
+        while (!done) {
+          const { value, done: doneReading } = await reader.read()
+          done = doneReading
+          const chunkValue = decoder.decode(value, { stream: true })
+          text += chunkValue
+          // 实时更新数据
+          setData(prev => ({ ...prev, [stepId]: text }))
         }
         
+        // 流式完成后，如果需要后续处理（比如通知创建项目），可以在这里做
         if (!project) {
             onProjectCreated(projectName)
         }
+        
+      } else {
+        // 原有的非流式处理逻辑（用于 image_generation, full_report 等）
+        const result = await res.json()
+        if (result.status === "success") {
+          if (stepId === "image_generation") {
+            // Reload project to get images
+            if (project) {
+               const projRes = await fetch(`${API_URL}/api/project/${project}`)
+               const projData = await projRes.json()
+               setData(prev => ({ ...prev, images: projData.images }))
+            }
+          } else {
+            setData(prev => ({ ...prev, [stepId]: result.result }))
+          }
+          
+          if (!project) {
+              onProjectCreated(projectName)
+          }
+        }
       }
+
     } catch (error) {
       console.error(error)
       setStatus("failed")
@@ -241,37 +383,457 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
   const handleRunAll = async () => {
     setLoading(true)
     setStatus("in_progress")
-    setProgress(10)
+    setProgress(5)
     
     try {
-        // 修复：使用顺序执行并正确更新进度
-        const steps = [
-          { id: "market_analysis", progress: 30 },
-          { id: "visual_research", progress: 50 },
-          { id: "design_generation", progress: 70 },
-          { id: "image_generation", progress: 90 },
-          { id: "full_report", progress: 100 }
-        ]
+        // 调用新的异步全流程接口
+        const res = await fetch(`${API_URL}/api/workflow/run_all`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                project_name: projectName,
+                brief: brief,
+                model_name: modelName,
+                settings: {
+                    image_count: imageCount,
+                    persona: userPersona,
+                    jimeng_session_id: jimengSessionId
+                }
+            })
+        })
         
-        for (const step of steps) {
-          setCurrentStep(step.id)
-          setProgress(step.progress)
-          await runStep(step.id)
+        if (res.ok) {
+            console.log("全流程任务已提交后台运行")
+            // 触发 onProjectCreated 以刷新侧边栏
+            onProjectCreated(projectName)
+            
+            // 启动轮询 (useEffect 会自动处理 status="in_progress" 的轮询)
+            // 这里我们只需要确保本地状态正确，让 useEffect 接管
+        } else {
+            throw new Error("Failed to start workflow")
         }
-        
-        setStatus("completed")
     } catch (e) {
         setStatus("failed")
         console.error("运行失败:", e)
-    } finally {
         setLoading(false)
     }
+    // 注意：这里不要 setLoading(false)，因为任务还在后台跑
+    // setLoading(false) 会由轮询逻辑在检测到完成时触发
   }
 
   // --- Render Functions ---
 
+  const renderTabContent = (rawContent: string) => {
+    // 1. CRITICAL FIX: Clean content immediately to handle escaped newlines from backend
+    // This ensures both JSON parsing and Markdown rendering get correct newline characters
+    const content = rawContent ? rawContent.replace(/\\n/g, '\n') : "";
+
+    if (!content) {
+        return (
+            <div className="py-24 text-center text-zinc-300">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                <p>No content</p>
+            </div>
+        )
+    }
+
+    // Fix markdown formatting: add line breaks between common patterns
+    const fixMarkdownFormat = (text: string): string => {
+      if (!text) return ""
+      let fixed = text
+      
+      // 1. Aggressively insert newlines before headers, BUT protect hex codes and tables
+      // Exclude if preceded by | (table) or if it looks like a hex code #123
+      // Using a simplified approach: Only insert if it looks like a block header
+      fixed = fixed.replace(/([^|\n])\s*(#{1,6}\s)/g, '$1\n\n$2')
+      
+      // 2. Aggressively insert newlines before list items, BUT protect tables
+      // Exclude if preceded by | (table separator or cell)
+      fixed = fixed.replace(/([^|\n])\s*([*-]\s)/g, '$1\n\n$2')
+      fixed = fixed.replace(/([^|\n])\s*(\d+\.\s)/g, '$1\n\n$2')
+
+      // 3. Ensure headers have enough spacing even if they have one newline
+      fixed = fixed.replace(/\n(#{1,6}\s)/g, '\n\n$1')
+
+      // 4. Clean up excessive newlines
+      fixed = fixed.replace(/\n{3,}/g, '\n\n')
+      
+      return fixed
+    }
+
+    const processedContent = fixMarkdownFormat(content)
+
+    // Try to parse as JSON
+    let parsedData = null
+    let isJson = false
+
+    const trimmedContent = processedContent.trim()
+    
+    // Check if content is markdown (starts with #, >, or contains |)
+    const isMarkdownContent = trimmedContent.startsWith('#') || 
+                              trimmedContent.startsWith('>') || 
+                              trimmedContent.includes('|') ||
+                              trimmedContent.includes('```') ||
+                              trimmedContent.includes('---')
+
+    // Only try JSON parsing if it doesn't look like markdown and starts with { or [
+    if (!isMarkdownContent && (trimmedContent.startsWith('{') || trimmedContent.startsWith('['))) {
+      // 1. Try direct parse
+      try {
+        parsedData = JSON.parse(trimmedContent)
+      } catch (e) {
+        // Failed direct parse
+      }
+
+      // 2. If failed, try extracting from markdown code block
+      if (!parsedData) {
+        const jsonMatch = processedContent.match(/```json\s*(\{[\s\S]*?\})\s*```/)
+        if (jsonMatch && jsonMatch[1]) {
+          try {
+            parsedData = JSON.parse(jsonMatch[1])
+          } catch (e) {
+            // Failed markdown parse
+          }
+        }
+      }
+
+      // 3. If still failed, try finding first '{' and last '}'
+      if (!parsedData) {
+        const firstOpen = processedContent.indexOf('{')
+        const lastClose = processedContent.lastIndexOf('}')
+        if (firstOpen !== -1 && lastClose !== -1 && lastClose > firstOpen) {
+          try {
+            const potentialJson = processedContent.substring(firstOpen, lastClose + 1)
+            parsedData = JSON.parse(potentialJson)
+          } catch (e) {
+            // Failed substring parse
+          }
+        }
+      }
+    }
+
+    if (parsedData) {
+      isJson = true
+    }
+
+    const MarkdownRenderer = ({ children }: { children: string }) => (
+        <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+                h1: ({ node, ...props }) => <h1 {...props} className="text-zinc-900 dark:text-white" />,
+                h2: ({ node, ...props }) => (
+                    <h2 {...props} className="text-zinc-800 dark:text-zinc-100 group">
+                        <span className="w-1.5 h-6 bg-zinc-900 dark:bg-zinc-100 rounded-full inline-block mr-2 align-middle" />
+                        <span className="align-middle">{props.children}</span>
+                    </h2>
+                ),
+                h3: ({ node, ...props }) => <h3 {...props} className="text-zinc-800 dark:text-zinc-200 mt-8 mb-4 font-bold" />,
+                img: ({ node, ...props }) => {
+                    const src = typeof props.src === 'string' ? props.src : '';
+                    const isRelative = src && !src.startsWith('http') && !src.startsWith('https') && !src.startsWith('/');
+                    const finalSrc = isRelative ? `${API_URL}/projects/${project}/${src}` : src;
+                    return (
+                        <span className="block my-10 flex flex-col items-center gap-3">
+                            <img 
+                                {...props} 
+                                src={finalSrc} 
+                                className="max-w-full max-h-[500px] object-contain rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 transition-transform hover:scale-[1.01]" 
+                            />
+                            {props.alt && <span className="text-xs font-medium text-zinc-400 italic">图示：{props.alt}</span>}
+                        </span>
+                    );
+                },
+                table: ({ node, ...props }) => (
+                    <div className="my-8 overflow-hidden border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm">
+                        <table {...props} className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800" />
+                    </div>
+                ),
+                blockquote: ({ node, ...props }) => (
+                    <blockquote {...props} className="not-prose my-8 border-l-4 border-zinc-900 dark:border-zinc-100 bg-zinc-50 dark:bg-zinc-800/50 p-6 rounded-r-2xl text-zinc-700 dark:text-zinc-300 italic shadow-sm" />
+                )
+            }}
+        >
+            {children}
+        </ReactMarkdown>
+    )
+
+    if (isJson && parsedData) {
+        // Special rendering for Design Generation (Design Proposals)
+        if (activeTab === "design_generation") {
+            const coreIdea = parsedData.summary || parsedData.core_idea || "";
+            const prompts = parsedData.prompts || parsedData.visuals || [];
+            
+            // Fallback: If no prompts, render raw content
+            if (!prompts || prompts.length === 0) {
+                 return (
+                    <div className="prose prose-zinc prose-lg max-w-none dark:prose-invert">
+                        <MarkdownRenderer>{processedContent}</MarkdownRenderer>
+                    </div>
+                )
+            }
+
+            return (
+                <div className="space-y-12 animate-in fade-in duration-500">
+                    {/* Core Idea Section */}
+                    {coreIdea && (
+                        <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 dark:from-zinc-800 dark:to-zinc-950 p-8 rounded-3xl shadow-xl text-white relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                            <div className="relative z-10">
+                                <h4 className="flex items-center gap-3 text-white/60 font-bold mb-4 text-xs uppercase tracking-widest">
+                                    <Sparkles className="h-4 w-4" /> 提案核心策略
+                                </h4>
+                                <p className="text-base md:text-lg font-medium leading-relaxed opacity-90">
+                                    {coreIdea}
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Proposals Grid */}
+                    <div className="grid gap-12">
+                        {prompts.map((item: any, i: number) => (
+                            <div key={i} className="group relative bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500">
+                                <div className="grid md:grid-cols-2 gap-0 h-full">
+                                    {/* Left: Image */}
+                                    <div className="relative h-[400px] md:h-auto bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                                        {item.image_path ? (
+                                            <img 
+                                                src={`${API_URL}${item.image_path}`} 
+                                                alt={item.scheme || item.concept || `Proposal ${i+1}`}
+                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center text-zinc-400">
+                                                <ImageIcon className="h-12 w-12 mb-4 opacity-20" />
+                                                <p className="text-xs uppercase tracking-widest">等待绘图生成...</p>
+                                            </div>
+                                        )}
+                                        <div className="absolute top-4 left-4 bg-white/90 dark:bg-zinc-900/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                                            方案 0{i + 1}
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Content */}
+                                    <div className="p-8 md:p-10 flex flex-col h-full">
+                                        <div className="mb-6">
+                                            <h3 className="text-2xl font-display font-bold text-zinc-900 dark:text-white mb-2">
+                                                {item.scheme || item.concept || `方案 ${i+1}`}
+                                            </h3>
+                                            <div className="h-1 w-12 bg-zinc-900 dark:bg-white rounded-full"></div>
+                                        </div>
+
+                                        <div className="space-y-6 flex-1">
+                                            {item.inspiration && (
+                                                <div>
+                                                    <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 flex items-center gap-2">
+                                                        <Zap className="h-3 w-3" /> 创意源泉
+                                                    </h5>
+                                                    <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                                                        {item.inspiration}
+                                                    </p>
+                                                </div>
+                                            )}
+                                            
+                                            {item.description && (
+                                                <div>
+                                                    <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 flex items-center gap-2">
+                                                        <FileText className="h-3 w-3" /> 设计故事
+                                                    </h5>
+                                                    <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                                                        {item.description}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {item.cmf && (
+                                                <div>
+                                                    <h5 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-2 flex items-center gap-2">
+                                                        <Palette className="h-3 w-3" /> CMF 定义
+                                                    </h5>
+                                                    <p className="text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
+                                                        {item.cmf}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {item.prompt && (
+                                            <div className="mt-8 pt-6 border-t border-zinc-100 dark:border-zinc-800">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 flex items-center gap-2">
+                                                        <Code className="h-3 w-3" /> 绘图 Prompt
+                                                    </span>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="sm" 
+                                                        className="h-6 text-[10px] hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(item.prompt);
+                                                            alert("提示词已复制！");
+                                                        }}
+                                                    >
+                                                        <Copy className="h-3 w-3 mr-1" /> 复制
+                                                    </Button>
+                                                </div>
+                                                <div className="bg-zinc-50 dark:bg-zinc-950 p-3 rounded-lg border border-zinc-100 dark:border-zinc-800">
+                                                    <p className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 leading-relaxed line-clamp-3 hover:line-clamp-none transition-all cursor-text select-text">
+                                                        {item.prompt}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-8 animate-in fade-in duration-500">
+                {/* Summary Section */}
+                {parsedData.summary && (
+                    <div className="bg-emerald-50 dark:bg-emerald-950/30 p-6 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 shadow-sm">
+                        <h4 className="flex items-center gap-2 text-emerald-800 dark:text-emerald-400 font-bold mb-3 text-sm uppercase tracking-wider">
+                            <Sparkles className="h-4 w-4" /> 核心摘要
+                        </h4>
+                        <p className="text-emerald-900 dark:text-emerald-100 text-base leading-relaxed font-medium">
+                            {parsedData.summary}
+                        </p>
+                    </div>
+                )}
+                
+                {/* Main Content */}
+                {parsedData.content && (
+                    <div className="prose prose-zinc prose-lg max-w-none dark:prose-invert 
+                        prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight 
+                        prose-h1:text-4xl prose-h1:mb-8 prose-h1:pb-4 prose-h1:border-b prose-h1:border-zinc-100 dark:prose-h1:border-zinc-800
+                        prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:flex prose-h2:items-center
+                        prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-p:leading-relaxed prose-p:mb-6
+                        prose-li:text-zinc-600 dark:prose-li:text-zinc-400 prose-li:mb-2
+                        prose-strong:text-zinc-900 dark:prose-strong:text-white
+                        prose-th:bg-zinc-50 dark:prose-th:bg-zinc-800 prose-th:px-4 prose-th:py-3 prose-th:text-xs prose-th:font-bold prose-th:uppercase prose-th:tracking-wider
+                        prose-td:px-4 prose-td:py-3 prose-td:text-sm prose-td:border-t prose-td:border-zinc-100 dark:prose-td:border-zinc-800">
+                        <MarkdownRenderer>{fixMarkdownFormat(parsedData.content.replace(/\\n/g, '\n'))}</MarkdownRenderer>
+                    </div>
+                )}
+                
+                {/* Prompts/Visuals Section */}
+                {(parsedData.visuals || parsedData.prompts) && (
+                    <div className="space-y-6 pt-8 border-t border-zinc-200 dark:border-zinc-800">
+                        <h3 className="text-xl font-display font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                             <ImageIcon className="h-5 w-5 text-zinc-500" /> 
+                             视觉方案与提示词
+                        </h3>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            {(parsedData.visuals || parsedData.prompts).map((item: any, i: number) => (
+                                <div key={i} className="bg-zinc-50 dark:bg-zinc-900/50 p-5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors group">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-800 text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                                            {i + 1}
+                                        </span>
+                                        <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">
+                                            {item.concept || item.scheme || `方案 ${i+1}`}
+                                        </span>
+                                    </div>
+                                    
+                                    {/* Image Display if available */}
+                                    {item.image_path && (
+                                        <div className="mb-4 aspect-square overflow-hidden rounded-lg bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800">
+                                            <img 
+                                                src={`${API_URL}${item.image_path}`} 
+                                                alt={item.concept || "Generated Image"}
+                                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div className="bg-white dark:bg-zinc-950 p-3 rounded-lg border border-zinc-100 dark:border-zinc-800 shadow-inner">
+                                        <p className="text-zinc-500 dark:text-zinc-400 font-mono text-[10px] leading-relaxed line-clamp-4 group-hover:line-clamp-none transition-all">
+                                            {item.prompt}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        )
+    }
+
+    // Default Markdown Rendering (for non-JSON content)
+    return (
+        <div className="prose prose-zinc prose-lg max-w-none dark:prose-invert 
+            prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight 
+            prose-h1:text-4xl prose-h1:mb-8 prose-h1:pb-4 prose-h1:border-b prose-h1:border-zinc-100 dark:prose-h1:border-zinc-800
+            prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:flex prose-h2:items-center
+            prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-p:leading-relaxed prose-p:mb-6
+            prose-li:text-zinc-600 dark:prose-li:text-zinc-400 prose-li:mb-2
+            prose-strong:text-zinc-900 dark:prose-strong:text-white
+            prose-th:bg-zinc-50 dark:prose-th:bg-zinc-800 prose-th:px-4 prose-th:py-3 prose-th:text-xs prose-th:font-bold prose-th:uppercase prose-th:tracking-wider
+            prose-td:px-4 prose-td:py-3 prose-td:text-sm prose-td:border-t prose-td:border-zinc-100 dark:prose-td:border-zinc-800">
+            <MarkdownRenderer>{processedContent}</MarkdownRenderer>
+        </div>
+    )
+  }
+
   const renderHome = () => (
-    <div className="flex-1 flex flex-col items-center justify-start p-6 overflow-y-auto custom-scrollbar bg-zinc-50/50 dark:bg-zinc-950">
+    <div className="flex-1 flex flex-col items-center justify-start p-6 overflow-y-auto custom-scrollbar bg-zinc-50/50 dark:bg-zinc-950 relative">
+        {/* Settings Button */}
+        <div className="absolute top-6 right-6">
+            <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="ghost" size="icon" className="hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full">
+                        <Settings className="h-5 w-5 text-zinc-500" />
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                    <DialogHeader>
+                        <DialogTitle className="text-zinc-900 dark:text-white">系统设置</DialogTitle>
+                        <DialogDescription className="text-zinc-500">
+                            配置您的 AI 工作流偏好与 API 设置。
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="persona" className="text-zinc-900 dark:text-white flex items-center gap-2">
+                                <User className="h-4 w-4" /> 个性化角色 (Persona)
+                            </Label>
+                            <Input
+                                id="persona"
+                                value={userPersona}
+                                onChange={(e) => setUserPersona(e.target.value)}
+                                placeholder="例如：资深工业设计师 / 材质专家"
+                                className="col-span-3 bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                            />
+                            <p className="text-[10px] text-zinc-400">
+                                设定 AI 的思考视角，如“注重材质的建模师”或“注重光影的摄影师”。
+                            </p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="session-id" className="text-zinc-900 dark:text-white flex items-center gap-2">
+                                <Key className="h-4 w-4" /> 即梦 SessionID
+                            </Label>
+                            <Input
+                                id="session-id"
+                                value={jimengSessionId}
+                                onChange={(e) => setJimengSessionId(e.target.value)}
+                                placeholder="输入您的 Jimeng SessionID 以提升额度"
+                                className="col-span-3 bg-zinc-50 dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                                type="password"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button onClick={saveSettings} className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900">保存设置</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+
         <section className="w-full max-w-4xl space-y-8 my-auto py-8">
             <div className="text-center space-y-2">
                 <h3 className="text-3xl font-display font-bold text-zinc-900 dark:text-white tracking-tight">
@@ -344,6 +906,28 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div className="bg-white dark:bg-zinc-900 p-6 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all">
+                     <div className="flex items-center justify-between mb-4">
+                        <label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 px-1">
+                            生成图片数量: {imageCount}
+                        </label>
+                     </div>
+                     <input 
+                        type="range" 
+                        min="1" 
+                        max="8" 
+                        step="1" 
+                        value={imageCount}
+                        onChange={(e) => setImageCount(parseInt(e.target.value))}
+                        className="w-full h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer dark:bg-zinc-700 accent-zinc-900 dark:accent-zinc-100"
+                     />
+                     <div className="flex justify-between text-xs text-zinc-400 mt-2 font-mono">
+                        <span>1</span>
+                        <span>4 (默认)</span>
+                        <span>8</span>
+                     </div>
                 </div>
 
                 <div className="flex justify-center pt-4">
@@ -421,16 +1005,24 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
         <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-8 py-4 flex-shrink-0">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    <CheckCircle2 className={cn("h-5 w-5", status === "completed" ? "text-emerald-500" : "text-zinc-400")} />
                     <h2 className="text-xl font-display font-bold text-zinc-900 dark:text-white">
                         成果展示: {projectName}
                     </h2>
+                    {status === "in_progress" && (
+                        <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-xs font-bold animate-pulse">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span>AI 正在思考: {STEPS.find(s => s.id === currentStep)?.label || "处理中"}...</span>
+                        </div>
+                    )}
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 px-3 py-1.5 rounded-full font-medium">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                        <span>生成完毕</span>
-                    </div>
+                    {status === "completed" && (
+                        <div className="flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 px-3 py-1.5 rounded-full font-medium">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span>生成完毕</span>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -457,21 +1049,34 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
             <div className="max-w-[1400px] mx-auto p-8 space-y-8">
                 <div className="flex items-center justify-between gap-4 border-b border-zinc-200 dark:border-zinc-800 pb-4">
                     <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-lg">
-                        {STEPS.map(step => (
-                            <button
-                                key={step.id}
-                                onClick={() => setActiveTab(step.id)}
-                                className={cn(
-                                    "px-6 py-2 text-[11px] font-bold rounded-md flex items-center gap-2 transition-all uppercase tracking-wider",
-                                    activeTab === step.id 
-                                        ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" 
-                                        : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
-                                )}
-                            >
-                                <step.icon className="h-3.5 w-3.5" />
-                                {step.label}
-                            </button>
-                        ))}
+                        {STEPS.map(step => {
+                            // Check status
+                            let isCompleted = false;
+                            if (step.id === "market_analysis") isCompleted = !!data.market_analysis;
+                            else if (step.id === "visual_research") isCompleted = !!data.visual_research;
+                            else if (step.id === "design_generation") isCompleted = !!data.design_proposals;
+                            else if (step.id === "image_generation") isCompleted = data.images && data.images.length > 0;
+
+                            return (
+                                <button
+                                    key={step.id}
+                                    onClick={() => setActiveTab(step.id)}
+                                    className={cn(
+                                        "px-4 py-2 text-xs font-bold rounded-md flex items-center gap-2 transition-all relative",
+                                        activeTab === step.id 
+                                            ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-white" 
+                                            : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300"
+                                    )}
+                                >
+                                    <step.icon className="h-4 w-4" />
+                                    {step.label}
+                                    <span className={cn(
+                                        "w-1.5 h-1.5 rounded-full ml-1",
+                                        isCompleted ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-600"
+                                    )} />
+                                </button>
+                            )
+                        })}
                     </div>
                     <div className="flex gap-3">
                         <Button 
@@ -495,99 +1100,131 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
 
                 <div className="mt-8">
                     {activeTab === "image_generation" ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {data.images && data.images.length > 0 ? (
-                                data.images.map((img: string, idx: number) => (
-                                    <div key={idx} className="group relative bg-white dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                                        <div className="aspect-[4/5] overflow-hidden bg-zinc-100 dark:bg-zinc-800">
-                                            <img 
-                                                src={`${API_URL}${img}`} 
-                                                alt={`Concept ${idx + 1}`}
-                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                            />
-                                        </div>
-                                        <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/90 via-zinc-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
-                                            <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                                                <p className="text-white text-lg font-display font-bold">设计方案 {idx + 1}</p>
-                                                <p className="text-zinc-300 text-xs mt-1">高保真创意渲染图</p>
-                                                <div className="flex gap-2 mt-4">
-                                                    <Button variant="secondary" size="sm" className="flex-1 font-bold text-[10px] uppercase tracking-wider" asChild>
-                                                        <a href={`${API_URL}${img}`} download target="_blank">立即下载</a>
-                                                    </Button>
-                                                    <Button variant="secondary" size="icon" className="bg-white/20 backdrop-blur-md text-white border-none hover:bg-white/40">
-                                                        <ExternalLink className="h-4 w-4" />
-                                                    </Button>
+                        <div className="space-y-6">
+                             <div className="flex justify-between items-center">
+                                 <div className="space-y-1">
+                                     <h3 className="text-lg font-display font-bold text-zinc-900 dark:text-white">创意方案图库</h3>
+                                     <p className="text-xs text-zinc-500">基于当前设计提案生成的视觉方案。</p>
+                                 </div>
+                                 <div className="flex items-center gap-2">
+                                     <select 
+                                         className="h-9 rounded-md border border-zinc-200 bg-white px-3 py-1 text-xs font-medium shadow-sm focus:outline-none dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+                                         value={appendCount}
+                                         onChange={(e) => setAppendCount(parseInt(e.target.value))}
+                                     >
+                                         <option value={2}>+2张</option>
+                                         <option value={4}>+4张</option>
+                                         <option value={8}>+8张</option>
+                                         <option value={12}>+12张</option>
+                                         <option value={20}>+20张</option>
+                                     </select>
+                                     <Button 
+                                         onClick={handleGenerateMore} 
+                                         disabled={isGeneratingMore}
+                                         className="bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 text-xs h-9 px-4"
+                                     >
+                                         {isGeneratingMore ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-2" /> : <Plus className="h-3.5 w-3.5 mr-2" />}
+                                         追加生成
+                                     </Button>
+                                 </div>
+                             </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {(() => {
+                                    // Try to merge images with prompts from design_proposals
+                                    let galleryItems = [];
+                                    
+                                    // 1. Try to parse design_proposals to get structured prompts
+                                    let promptsMap = new Map();
+                                    try {
+                                        if (data.design_proposals && data.design_proposals.trim().startsWith('{')) {
+                                            const parsed = JSON.parse(data.design_proposals);
+                                            if (parsed.prompts && Array.isArray(parsed.prompts)) {
+                                                parsed.prompts.forEach((p: any) => {
+                                                    if (p.image_path) {
+                                                        // Normalize path to match data.images format
+                                                        const normalizedPath = p.image_path.startsWith('/') ? p.image_path : `/${p.image_path}`;
+                                                        promptsMap.set(normalizedPath, p.prompt);
+                                                    }
+                                                });
+                                            }
+                                        }
+                                    } catch (e) {
+                                        console.error("Failed to parse design proposals for gallery", e);
+                                    }
+
+                                    // 2. Map data.images to items
+                                    if (data.images && data.images.length > 0) {
+                                        galleryItems = data.images.map((img: string) => ({
+                                            src: img,
+                                            prompt: promptsMap.get(img) || ""
+                                        }));
+                                    }
+                                    
+                                    return galleryItems.length > 0 ? (
+                                        galleryItems.map((item: any, idx: number) => (
+                                            <div key={idx} className="group relative bg-white dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
+                                                <div className="aspect-[4/5] overflow-hidden bg-zinc-100 dark:bg-zinc-800 relative">
+                                                    <img 
+                                                        src={`${API_URL}${item.src}`} 
+                                                        alt={`Concept ${idx + 1}`}
+                                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/90 via-zinc-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+                                                        <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                                                            <div className="flex gap-2 mt-4">
+                                                                <Button variant="secondary" size="sm" className="flex-1 font-bold text-[10px] uppercase tracking-wider" asChild>
+                                                                    <a href={`${API_URL}${item.src}`} download target="_blank">立即下载</a>
+                                                                </Button>
+                                                                <Button variant="secondary" size="icon" className="bg-white/20 backdrop-blur-md text-white border-none hover:bg-white/40">
+                                                                    <ExternalLink className="h-4 w-4" />
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
+                                                
+                                                {/* Prompt Display Section */}
+                                                {item.prompt && (
+                                                    <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 flex-1 flex flex-col">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Prompt</span>
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="sm" 
+                                                                className="h-6 text-[10px] hover:bg-zinc-200 dark:hover:bg-zinc-800"
+                                                                onClick={() => {
+                                                                    navigator.clipboard.writeText(item.prompt);
+                                                                    alert("提示词已复制！");
+                                                                }}
+                                                            >
+                                                                复制
+                                                            </Button>
+                                                        </div>
+                                                        <p className="text-zinc-600 dark:text-zinc-400 text-xs font-mono leading-relaxed line-clamp-3 hover:line-clamp-none transition-all cursor-text select-text bg-white dark:bg-zinc-950 p-2 rounded border border-zinc-200 dark:border-zinc-800">
+                                                            {item.prompt}
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
+                                        ))
+                                    ) : (
+                                        <div className="col-span-full py-24 text-center">
+                                            <ImageIcon className="h-12 w-12 mx-auto text-zinc-300 mb-4 opacity-20" />
+                                            <p className="text-zinc-400">暂无生成的图片。</p>
                                         </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="col-span-full py-24 text-center">
-                                    <ImageIcon className="h-12 w-12 mx-auto text-zinc-300 mb-4 opacity-20" />
-                                    <p className="text-zinc-400">暂无生成的图片。</p>
-                                </div>
-                            )}
+                                    );
+                                })()}
+                            </div>
                         </div>
                     ) : (
                         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-10 shadow-sm min-h-[600px]">
-                            <div className="prose prose-zinc prose-lg max-w-none dark:prose-invert 
-                                prose-headings:font-display prose-headings:font-bold prose-headings:tracking-tight 
-                                prose-h1:text-4xl prose-h1:mb-8 prose-h1:pb-4 prose-h1:border-b prose-h1:border-zinc-100 dark:prose-h1:border-zinc-800
-                                prose-h2:text-2xl prose-h2:mt-12 prose-h2:mb-6 prose-h2:flex prose-h2:items-center prose-h2:gap-3
-                                prose-p:text-zinc-600 dark:prose-p:text-zinc-400 prose-p:leading-relaxed prose-p:mb-6
-                                prose-li:text-zinc-600 dark:prose-li:text-zinc-400 prose-li:mb-2
-                                prose-strong:text-zinc-900 dark:prose-strong:text-white
-                                prose-blockquote:border-l-4 prose-blockquote:border-zinc-200 dark:prose-blockquote:border-zinc-700 prose-blockquote:bg-zinc-50 dark:prose-blockquote:bg-zinc-800/50 prose-blockquote:py-2 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-blockquote:italic
-                                prose-table:border prose-table:border-zinc-100 dark:prose-table:border-zinc-800 prose-table:rounded-xl prose-table:overflow-hidden
-                                prose-th:bg-zinc-50 dark:prose-th:bg-zinc-800 prose-th:px-4 prose-th:py-3 prose-th:text-xs prose-th:font-bold prose-th:uppercase prose-th:tracking-wider
-                                prose-td:px-4 prose-td:py-3 prose-td:text-sm prose-td:border-t prose-td:border-zinc-100 dark:prose-td:border-zinc-800">
-                                {data[activeTab] ? (
-                                    <ReactMarkdown
-                                        remarkPlugins={[remarkGfm]}
-                                        components={{
-                                            h1: ({ node, ...props }) => <h1 {...props} className="text-zinc-900 dark:text-white" />,
-                                            h2: ({ node, ...props }) => (
-                                                <h2 {...props} className="text-zinc-800 dark:text-zinc-100 group">
-                                                    <span className="w-1.5 h-6 bg-zinc-900 dark:bg-zinc-100 rounded-full inline-block" />
-                                                    {props.children}
-                                                </h2>
-                                            ),
-                                            h3: ({ node, ...props }) => <h3 {...props} className="text-zinc-800 dark:text-zinc-200 mt-8 mb-4 font-bold" />,
-                                            img: ({ node, ...props }) => {
-                                                const src = typeof props.src === 'string' ? props.src : '';
-                                                const isRelative = src && !src.startsWith('http') && !src.startsWith('https') && !src.startsWith('/');
-                                                const finalSrc = isRelative ? `${API_URL}/projects/${project}/${src}` : src;
-                                                return (
-                                                    <span className="block my-10 flex flex-col items-center gap-3">
-                                                        <img 
-                                                            {...props} 
-                                                            src={finalSrc} 
-                                                            className="max-w-full max-h-[500px] object-contain rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 transition-transform hover:scale-[1.01]" 
-                                                        />
-                                                        {props.alt && <span className="text-xs font-medium text-zinc-400 italic">图示：{props.alt}</span>}
-                                                    </span>
-                                                );
-                                            },
-                                            table: ({ node, ...props }) => (
-                                                <div className="my-8 overflow-hidden border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm">
-                                                    <table {...props} className="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800" />
-                                                </div>
-                                            ),
-                                            blockquote: ({ node, ...props }) => (
-                                                <blockquote {...props} className="not-prose my-8 border-l-4 border-zinc-900 dark:border-zinc-100 bg-zinc-50 dark:bg-zinc-800/50 p-6 rounded-r-2xl text-zinc-700 dark:text-zinc-300 italic shadow-sm" />
-                                            )
-                                        }}
-                                    >
-                                        {data[activeTab]}
-                                    </ReactMarkdown>
-                                ) : (
-                                    <div className="py-24 text-center text-zinc-300">
-                                        <FileText className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                                        <p>该章节暂无内容。</p>
-                                    </div>
-                                )}
-                            </div>
+                            {(() => {
+                                // CRITICAL FIX: Correctly map activeTab to data key
+                                const currentContent = activeTab === "design_generation" 
+                                    ? data.design_proposals 
+                                    : data[activeTab];
+                                return renderTabContent(currentContent);
+                            })()}
                         </div>
                     )}
                 </div>
@@ -597,7 +1234,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
   )
 
   if (project === null && status === "pending") return renderHome()
-  if (status === "in_progress") return renderLoading()
+  // if (status === "in_progress" || (project !== null && status === "pending")) return renderLoading()
   
   if (status === "failed") {
       return (

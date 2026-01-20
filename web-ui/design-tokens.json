@@ -1,0 +1,14 @@
+{
+  "colors": {
+    "primary": "#000000",
+    "secondary": "#ffffff",
+    "accent": "#3b82f6"
+  },
+  "typography": {
+    "heading": {
+      "fontFamily": "Inter",
+      "fontSize": "24px",
+      "fontWeight": "700"
+    }
+  }
+}
