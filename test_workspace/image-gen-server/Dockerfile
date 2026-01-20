@@ -1,7 +1,8 @@
 # Use Python 3.10 slim image
 FROM python:3.10-slim
 
-WORKDIR /app
+# Set working directory to the image-gen-server folder
+WORKDIR /app/test_workspace/image-gen-server
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
