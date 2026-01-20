@@ -69,6 +69,9 @@ class ImageGenService:
 
     def _generate_http(self, prompt, output_path, filename, session_id=None):
         """HTTP 模式生成图片"""
+        print(f"[DEBUG] HTTP 图片服务 URL: {self.http_url}")
+        print(f"[DEBUG] 模式: {self.mode}")
+
         try:
             # 注入 Session ID 到环境变量
             headers = {"Content-Type": "application/json"}
@@ -80,19 +83,28 @@ class ImageGenService:
 
             if session_id:
                 os.environ["JIMENG_SESSION_ID"] = session_id
+                print(f"[DEBUG] 使用 Session ID: {session_id[:10]}...")
 
+            print(f"[DEBUG] 发送请求到 {self.http_url}/generate")
             response = requests.post(
                 f"{self.http_url}/generate", json=payload, headers=headers, timeout=120
             )
 
+            print(f"[DEBUG] 响应状态码: {response.status_code}")
+            print(f"[DEBUG] 响应内容: {response.text[:200]}...")
+
             if response.status_code == 200:
                 result = response.json()
+                print(f"[DEBUG] 解析结果: {result}")
                 if result.get("success") and result.get("image_path"):
                     src_path = result["image_path"]
+                    print(f"[DEBUG] 图片路径: {src_path}")
                     if os.path.exists(src_path):
                         shutil.copy2(src_path, output_path)
                         print(f"✅ 图片已生成并保存至: {output_path}")
                         return output_path
+                    else:
+                        print(f"[DEBUG] 文件不存在: {src_path}")
 
             print(f"❌ HTTP 生成失败: {response.text}")
             return None
@@ -101,7 +113,10 @@ class ImageGenService:
             print("❌ HTTP 请求超时 (120s)")
             return None
         except Exception as e:
-            print(f"❌ HTTP 调用失败: {e}")
+            print(f"❌ HTTP 调用失败: {type(e).__name__}: {e}")
+            import traceback
+
+            traceback.print_exc()
             return None
 
     def _generate_local(self, prompt, output_path, filename, session_id=None):
