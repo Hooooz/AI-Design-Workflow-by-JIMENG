@@ -483,6 +483,18 @@ class DesignWorkflow:
             )
             self.log("✅ 已同步图片路径到数据库")
 
+            # 保存图片列表到数据库
+            if self.generated_images:
+                # 构建前端可访问的图片路径
+                image_paths = [
+                    f"/projects/{os.path.basename(self.output_dir)}/{os.path.basename(p)}"
+                    for p in self.generated_images
+                ]
+                api_module.save_project_images(
+                    os.path.basename(self.output_dir), image_paths
+                )
+                self.log("✅ 已保存图片列表到数据库")
+
         except Exception as e:
             self.log(f"⚠️ 同步数据库失败: {e}")
 

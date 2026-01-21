@@ -232,12 +232,12 @@ def save_metadata(project_dir: str, metadata: ProjectMetadata):
         print(f"数据库同步失败: {e}")
 
 
-def save_project_content(project_name: str, content: Dict[str, str]):
-    """保存项目文档内容到数据库"""
+def save_project_images(project_name: str, images: List[str]):
+    """保存项目图片列表到数据库"""
     try:
-        db_update_project(project_name, content=content)
+        db_update_project(project_name, images=images)
     except Exception as e:
-        print(f"保存项目内容失败: {e}")
+        print(f"保存项目图片失败: {e}")
 
 
 def save_intermediate_and_db(workflow, project_name: str, filename: str, content: str):
@@ -390,9 +390,9 @@ def get_project(project_name: str):
         design_proposals = db_content.get("design_proposals", "")
         full_report = db_content.get("full_report", "")
 
-        # 扫描图片（如果文件系统存在）
-        images = []
-        if os.path.exists(project_dir):
+        # 从数据库加载图片列表（优先），其次从文件系统扫描
+        images = db_meta.get("images", [])
+        if not images and os.path.exists(project_dir):
             try:
                 for f in os.listdir(project_dir):
                     if f.lower().endswith((".jpg", ".jpeg", ".png")):
@@ -459,46 +459,24 @@ def get_project(project_name: str):
         reverse=True,
     )
 
-    # 优先使用数据库元数据，否则使用文件系统
     metadata = (
-        db_meta
-        if db_meta
-        else (
-            meta.dict()
-            if meta
-            else {
-                "project_name": project_name,
-                "brief": "",
-                "creation_time": os.path.getmtime(project_dir),
-                "status": "completed",
-                "tags": [],
-            }
-        )
-    )
-
-    # 从数据库读取文档内容
-    db_content = db_meta.get("content", {}) if db_meta else {}
-
-    # 优先使用数据库内容，其次使用文件系统
-    market_analysis = db_content.get("market_analysis", "") or read_file(
-        "1_Market_Analysis.md"
-    )
-    visual_research = db_content.get("visual_research", "") or read_file(
-        "2_Visual_Research.md"
-    )
-    design_proposals = db_content.get("design_proposals", "") or read_file(
-        "3_Design_Proposals.md"
-    )
-    full_report = db_content.get("full_report", "") or read_file(
-        "Full_Design_Report.md"
+        meta.dict()
+        if meta
+        else {
+            "project_name": project_name,
+            "brief": "",
+            "creation_time": os.path.getmtime(project_dir),
+            "status": "completed",
+            "tags": [],
+        }
     )
 
     return {
         "metadata": metadata,
-        "market_analysis": market_analysis,
-        "visual_research": visual_research,
-        "design_proposals": design_proposals,
-        "full_report": full_report,
+        "market_analysis": read_file("1_Market_Analysis.md"),
+        "visual_research": read_file("2_Visual_Research.md"),
+        "design_proposals": read_file("3_Design_Proposals.md"),
+        "full_report": read_file("Full_Design_Report.md"),
         "images": images,
     }
 
