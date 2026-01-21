@@ -372,6 +372,46 @@ def list_projects():
     return projects
 
 
+@app.post("/api/admin/migrate-images")
+def migrate_images():
+    """迁移脚本：将现有项目的图片路径保存到 Supabase 数据库"""
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    projects_dir = os.path.join(root_dir, "projects")
+
+    projects = db_get_projects()
+    if not projects:
+        return {"status": "error", "message": "No projects found in database"}
+
+    migrated_count = 0
+    for project in projects:
+        project_name = project.get("project_name")
+        project_dir = os.path.join(projects_dir, project_name)
+
+        if not os.path.exists(project_dir):
+            continue
+
+        # Scan images from filesystem
+        images = []
+        for f in os.listdir(project_dir):
+            if f.lower().endswith((".jpg", ".jpeg", ".png")):
+                images.append(f"/projects/{project_name}/{f}")
+
+        if images:
+            # Sort by modification time
+            images.sort(
+                key=lambda x: os.path.getmtime(
+                    os.path.join(project_dir, os.path.basename(x))
+                ),
+                reverse=True,
+            )
+
+            # Update database with images
+            db_update_project(project_name, images=images)
+            migrated_count += 1
+
+    return {"status": "success", "migrated_projects": migrated_count}
+
+
 @app.get("/api/project/{project_name}")
 def get_project(project_name: str):
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
