@@ -430,8 +430,19 @@ def get_project(project_name: str):
         design_proposals = db_content.get("design_proposals", "")
         full_report = db_content.get("full_report", "")
 
-        # 从数据库加载图片列表（优先），其次从文件系统扫描
+        # 从数据库加载图片列表（优先）
         images = db_meta.get("images", [])
+
+        # 如果数据库中没有图片，尝试从 design_proposals JSON 提取
+        if not images and design_proposals and design_proposals.startswith("{"):
+            try:
+                dp = json.loads(design_proposals)
+                prompts = dp.get("prompts", [])
+                images = [p.get("image_path") for p in prompts if p.get("image_path")]
+            except:
+                pass
+
+        # 最后尝试从文件系统扫描
         if not images and os.path.exists(project_dir):
             try:
                 for f in os.listdir(project_dir):
