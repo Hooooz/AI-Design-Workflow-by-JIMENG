@@ -353,7 +353,7 @@ class DesignWorkflow:
         self, prompts_list: List[Dict], session_id=None, skip_json_update=False
     ):
         """
-        根据 Prompts 列表生成图片 (并行)，并更新对应的 JSON 文件
+        根据 Prompts 列表生成图片 (并行)，并更新对应的 JSON 文件和数据库
         """
         if not prompts_list:
             self.log("    ⚠️ 未检测到有效 Prompt，跳过绘图。")
@@ -412,8 +412,10 @@ class DesignWorkflow:
         if skip_json_update:
             return
 
-        # 尝试更新 3_Design_Proposals.json
+        # 尝试更新 3_Design_Proposals.json 和数据库
         json_path = os.path.join(self.output_dir, "3_Design_Proposals.json")
+        updated_data = None
+
         if os.path.exists(json_path):
             try:
                 with open(json_path, "r", encoding="utf-8") as f:
@@ -434,8 +436,55 @@ class DesignWorkflow:
                     json.dump(data, f, ensure_ascii=False, indent=2)
                 self.log("✅ 已更新 Design Proposals JSON 文件中的图片路径")
 
+                updated_data = data
+
             except Exception as e:
                 self.log(f"⚠️ 更新 JSON 文件失败: {e}")
+
+        # 同步到数据库
+        try:
+            # 使用局部导入避免循环依赖
+            from . import api as api_module
+
+            # 获取数据库中的现有内容
+            db_proj = api_module.db_get_project(os.path.basename(self.output_dir))
+            existing_content = db_proj.get("content", {}) if db_proj else {}
+
+            # 更新 design_proposals 字段
+            if updated_data:
+                existing_content["design_proposals"] = json.dumps(
+                    updated_data, ensure_ascii=False, indent=2
+                )
+            else:
+                # 即使 JSON 文件更新失败，也尝试同步 prompts_list 中的 image_path
+                if "design_proposals" in existing_content:
+                    try:
+                        existing_proposals = json.loads(
+                            existing_content["design_proposals"]
+                        )
+                        if "prompts" in existing_proposals:
+                            for i, item in enumerate(prompts_list):
+                                if (
+                                    i < len(existing_proposals["prompts"])
+                                    and "image_path" in item
+                                ):
+                                    existing_proposals["prompts"][i]["image_path"] = (
+                                        item["image_path"]
+                                    )
+                            existing_content["design_proposals"] = json.dumps(
+                                existing_proposals, ensure_ascii=False, indent=2
+                            )
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+
+            # 保存到数据库
+            api_module.save_project_content(
+                os.path.basename(self.output_dir), existing_content
+            )
+            self.log("✅ 已同步图片路径到数据库")
+
+        except Exception as e:
+            self.log(f"⚠️ 同步数据库失败: {e}")
 
     # 保留旧的内部方法名以兼容（如果有其他地方调用），但指向新方法
     _step_market_analysis = step_market_analysis
