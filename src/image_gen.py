@@ -89,12 +89,11 @@ class ImageGenService:
             return None
 
         try:
-            from urllib.parse import quote
+            import hashlib
 
-            # 对包含中文的项目名称和文件名进行 URL 编码
-            safe_project_name = quote(project_name)
-            safe_filename = quote(filename)
-            file_path = f"{safe_project_name}/{safe_filename}"
+            # 强制使用 MD5 哈希作为存储桶内的文件夹名，避免中文路径导致 Supabase 400 InvalidKey 错误
+            storage_folder = hashlib.md5(project_name.encode()).hexdigest()
+            file_path = f"{storage_folder}/{filename}"
             url = f"{self.supabase_url}/storage/v1/object/{self.supabase_bucket}/{file_path}"
 
             with open(local_path, "rb") as f:
