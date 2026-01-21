@@ -20,14 +20,9 @@ class ImageGenService:
 
         # Supabase Storage 配置
         self.supabase_url = os.getenv("SUPABASE_URL", "").strip()
-        self.supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+        self.supabase_key = os.getenv("SUPABASE_KEY", "").strip()
         self.supabase_bucket = "project-images"
-        # 只有两个变量都存在才启用 Storage
-        self.use_storage = bool(
-            self.supabase_url
-            and self.supabase_key
-            and "yojpsrakcqkyeaoxqlxg" in self.supabase_url
-        )
+        self.use_storage = bool(self.supabase_url and self.supabase_key)
 
         if self.use_storage:
             print(f"ℹ️ Supabase Storage: 已配置")
