@@ -495,6 +495,118 @@ def regenerate_missing_images():
     }
 
 
+class RegenerateRequest(BaseModel):
+    project_name: str
+    model_name: str = "gemini-2.5-flash-lite"
+
+
+@app.post("/api/admin/regenerate-images")
+def regenerate_project_images(req: RegenerateRequest):
+    """
+    为指定项目重新生成缺失的图片
+    使用数据库中存储的 prompts 重新生成图片，图片会自动上传到 Supabase Storage
+    """
+    project_name = req.project_name
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    project_dir = os.path.join(root_dir, "projects", project_name)
+
+    # 从数据库获取项目
+    db_meta = db_get_project(project_name)
+    if not db_meta:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    content = db_meta.get("content", {})
+    design_proposals_str = content.get("design_proposals", "")
+
+    if not design_proposals_str or not design_proposals_str.startswith("{"):
+        raise HTTPException(
+            status_code=400, detail="No design proposals found in database"
+        )
+
+    try:
+        dp = json.loads(design_proposals_str)
+        prompts = dp.get("prompts", [])
+
+        if not prompts:
+            raise HTTPException(status_code=400, detail="No prompts found")
+
+        # 创建工作流
+        workflow, _ = get_workflow(project_name, req.model_name)
+
+        # 过滤出需要重新生成的 prompts
+        missing_prompts = []
+        for i, prompt in enumerate(prompts):
+            image_path = prompt.get("image_path", "")
+            is_valid = False
+            if image_path.startswith("http"):
+                is_valid = True
+            elif image_path.startswith("/projects/"):
+                local_path = os.path.join(
+                    root_dir, "projects", image_path.replace("/projects/", "")
+                )
+                is_valid = os.path.exists(local_path)
+
+            if not is_valid:
+                missing_prompts.append(prompt)
+
+        if not missing_prompts:
+            return {
+                "status": "success",
+                "message": "所有图片都已存在，无需重新生成",
+                "images_generated": 0,
+            }
+
+        # 重新生成图片
+        workflow.log = lambda msg: print(f"[{project_name}] {msg}")
+        workflow.step_image_generation(missing_prompts)
+
+        # 收集新生成的图片
+        new_image_paths = workflow.generated_images
+
+        # 更新数据库中的 design_proposals
+        updated = False
+        for i, prompt in enumerate(prompts):
+            image_path = prompt.get("image_path", "")
+            is_valid = False
+            if image_path.startswith("http"):
+                is_valid = True
+            elif image_path.startswith("/projects/"):
+                local_path = os.path.join(
+                    root_dir, "projects", image_path.replace("/projects/", "")
+                )
+                is_valid = os.path.exists(local_path)
+
+            if not is_valid and i < len(new_image_paths):
+                # 用新的云端 URL 替换
+                prompt["image_path"] = new_image_paths[i]
+                updated = True
+
+        if updated:
+            content["design_proposals"] = json.dumps(dp, ensure_ascii=False, indent=2)
+            db_update_project(project_name, content=content)
+
+        # 更新 images 列表
+        all_images = []
+        for p in prompts:
+            if p.get("image_path"):
+                all_images.append(p["image_path"])
+
+        if all_images:
+            db_update_project(project_name, images=all_images)
+
+        return {
+            "status": "success",
+            "message": f"为 {project_name} 重新生成 {len(new_image_paths)} 张图片",
+            "images_generated": len(new_image_paths),
+            "project": project_name,
+        }
+
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=400, detail="Invalid design proposals JSON format"
+        )
+
+
 @app.get("/api/project/{project_name}")
 def get_project(project_name: str):
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
