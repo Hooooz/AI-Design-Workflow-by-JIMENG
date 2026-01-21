@@ -1438,8 +1438,9 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                                     </div>
                                                 )}
                                             </div>
-                                        ))
-                                    ) : (
+                                        );
+                                    })
+                                ) : (
                                         <div className="col-span-full py-24 text-center">
                                             <ImageIcon className="h-12 w-12 mx-auto text-zinc-300 mb-4 opacity-20" />
                                             <p className="text-zinc-400">暂无生成的图片。</p>

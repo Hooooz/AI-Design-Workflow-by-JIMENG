@@ -89,7 +89,12 @@ class ImageGenService:
             return None
 
         try:
-            file_path = f"{project_name}/{filename}"
+            from urllib.parse import quote
+
+            # 对包含中文的项目名称和文件名进行 URL 编码
+            safe_project_name = quote(project_name)
+            safe_filename = quote(filename)
+            file_path = f"{safe_project_name}/{safe_filename}"
             url = f"{self.supabase_url}/storage/v1/object/{self.supabase_bucket}/{file_path}"
 
             with open(local_path, "rb") as f:
@@ -190,7 +195,9 @@ class ImageGenService:
 
                     if storage_url:
                         return storage_url
-                    return output_path
+
+                    print(f"❌ 上传 Supabase 失败，且当前模式要求必须使用云端存储")
+                    return None
                 else:
                     print(f"❌ 下载失败: {response.status_code}")
 
@@ -258,7 +265,9 @@ class ImageGenService:
 
                         if storage_url:
                             return storage_url
-                        return output_path
+
+                        print(f"❌ 上传 Supabase 失败，且当前模式要求必须使用云端存储")
+                        return None
 
             print(f"❌ 生成失败: {response.text[:200]}")
             return None
