@@ -157,7 +157,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
       // Reset status to pending to show loading state immediately while fetching
       setStatus("pending") 
       
-      fetch(`${API_URL}/api/project/${project}`)
+      fetch(`${API_URL}/api/project/${encodeURIComponent(project)}`)
         .then(res => res.json())
         .then(projectData => {
           if (!isMounted) return
@@ -180,7 +180,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
              if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
              
              pollIntervalRef.current = setInterval(() => {
-               fetch(`${API_URL}/api/project/${project}`)
+               fetch(`${API_URL}/api/project/${encodeURIComponent(project)}`)
                  .then(res => res.json())
                  .then(updatedData => {
                    if (!isMounted) return
@@ -295,7 +295,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
     if (!project) return
     setIsExporting(true)
     try {
-      window.open(`${API_URL}/api/project/${project}/export`, "_blank")
+      window.open(`${API_URL}/api/project/${encodeURIComponent(project)}/export`, "_blank")
     } catch (e) {
       console.error(e)
     } finally {
@@ -330,7 +330,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
         const result = await res.json()
         if (result.status === "success") {
             // Reload project to get images
-            const projRes = await fetch(`${API_URL}/api/project/${project}`)
+            const projRes = await fetch(`${API_URL}/api/project/${encodeURIComponent(project)}`)
             const projData = await projRes.json()
             setData(prev => ({ ...prev, images: projData.images }))
         }
@@ -402,7 +402,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
           if (stepId === "image_generation") {
             // Reload project to get images
             if (project) {
-               const projRes = await fetch(`${API_URL}/api/project/${project}`)
+            const projRes = await fetch(`${API_URL}/api/project/${encodeURIComponent(project)}`)
                const projData = await projRes.json()
                setData(prev => ({ ...prev, images: projData.images }))
             }
