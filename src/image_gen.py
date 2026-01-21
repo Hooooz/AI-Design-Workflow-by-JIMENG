@@ -259,13 +259,6 @@ class ImageGenService:
                         if storage_url:
                             return storage_url
                         return output_path
-                elif result.get("success") and result.get("image_path"):
-                    # 兼容 image_path 格式
-                    src_path = result["image_path"]
-                    if os.path.exists(src_path):
-                        shutil.copy2(src_path, output_path)
-                        print(f"✅ 已保存: {output_path}")
-                        return output_path
 
             print(f"❌ 生成失败: {response.text[:200]}")
             return None

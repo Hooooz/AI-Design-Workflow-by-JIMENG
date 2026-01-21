@@ -45,15 +45,17 @@ def get_supabase_client():
 
 
 # Database operations
-def db_get_projects():
+def db_get_projects(limit: int = 50):
     client = get_supabase_client()
     if not client:
         return []
     try:
+        # 只选择元数据字段，避免加载大量文本内容导致前端卡顿
         result = (
             client.table("projects")
-            .select("*")
+            .select("project_name, creation_time, status, current_step, tags, model_name, brief")
             .order("creation_time", desc=True)
+            .limit(limit)
             .execute()
         )
         return result.data
@@ -235,7 +237,8 @@ def save_metadata(project_dir: str, metadata: ProjectMetadata):
 def save_project_images(project_name: str, images: List[str]):
     """保存项目图片列表到数据库"""
     try:
-        db_update_project(project_name, images=images)
+        # 确保保存的是修复后的公网 URL
+        db_update_project(project_name, images=fix_image_urls(images))
     except Exception as e:
         print(f"保存项目图片失败: {e}")
 
@@ -258,10 +261,23 @@ def save_intermediate_and_db(workflow, project_name: str, filename: str, content
         # 获取现有数据库内容
         db_proj = db_get_project(project_name)
         existing_content = db_proj.get("content", {}) if db_proj else {}
+
+        # 如果是设计方案，尝试修复 JSON 中的图片路径
+        if field == "design_proposals" and content.startswith("{"):
+            try:
+                dp = json.loads(content)
+                if "prompts" in dp:
+                    for p in dp["prompts"]:
+                        if p.get("image_path"):
+                            p["image_path"] = fix_image_urls([p["image_path"]])[0]
+                content = json.dumps(dp, ensure_ascii=False, indent=2)
+            except:
+                pass
+
         existing_content[field] = content
 
         # 保存到数据库
-        save_project_content(project_name, existing_content)
+        db_update_project(project_name, content=existing_content)
 
 
 # Helper to get workflow instance
@@ -334,9 +350,9 @@ def health_check():
 
 
 @app.get("/api/projects")
-def list_projects():
-    # 优先从数据库获取
-    db_projects = db_get_projects()
+def list_projects(limit: int = 50):
+    # 优先从数据库获取元数据
+    db_projects = db_get_projects(limit=limit)
     if db_projects:
         return db_projects
 
@@ -607,6 +623,25 @@ def regenerate_project_images(req: RegenerateRequest):
         )
 
 
+def fix_image_urls(images: List[str]) -> List[str]:
+    """将本地路径转换为 Supabase 公网 URL (如果适用)"""
+    if not images:
+        return []
+
+    supabase_url = config.SUPABASE_URL
+    bucket = "project-images"
+
+    fixed_images = []
+    for img in images:
+        if img.startswith("/projects/") and supabase_url:
+            # 转换 /projects/name/file.jpg 为 Supabase 公网 URL
+            path = img.replace("/projects/", "")
+            fixed_images.append(f"{supabase_url}/storage/v1/object/public/{bucket}/{path}")
+        else:
+            fixed_images.append(img)
+    return fixed_images
+
+
 @app.get("/api/project/{project_name}")
 def get_project(project_name: str):
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -615,7 +650,7 @@ def get_project(project_name: str):
     # 优先从数据库获取元数据
     db_meta = db_get_project(project_name)
 
-    # 如果项目在数据库中存在，直接返回数据库内容（支持 Railway 临时文件系统）
+    # 如果项目在数据库中存在，直接返回数据库内容
     if db_meta:
         db_content = db_meta.get("content", {}) if db_meta else {}
 
@@ -625,7 +660,7 @@ def get_project(project_name: str):
         design_proposals = db_content.get("design_proposals", "")
         full_report = db_content.get("full_report", "")
 
-        # 从数据库加载图片列表（优先）
+        # 从数据库加载图片列表
         images = db_meta.get("images", [])
 
         # 如果数据库中没有图片，尝试从 design_proposals JSON 提取
@@ -637,20 +672,8 @@ def get_project(project_name: str):
             except:
                 pass
 
-        # 最后尝试从文件系统扫描
-        if not images and os.path.exists(project_dir):
-            try:
-                for f in os.listdir(project_dir):
-                    if f.lower().endswith((".jpg", ".jpeg", ".png")):
-                        images.append(f"/projects/{project_name}/{f}")
-                images.sort(
-                    key=lambda x: os.path.getmtime(
-                        os.path.join(project_dir, os.path.basename(x))
-                    ),
-                    reverse=True,
-                )
-            except:
-                pass
+        # 修复 URL 路径
+        images = fix_image_urls(images)
 
         return {
             "metadata": db_meta,
