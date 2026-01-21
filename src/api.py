@@ -377,11 +377,47 @@ def get_project(project_name: str):
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     project_dir = os.path.join(root_dir, "projects", project_name)
 
-    if not os.path.exists(project_dir):
-        raise HTTPException(status_code=404, detail="Project not found")
-
     # 优先从数据库获取元数据
     db_meta = db_get_project(project_name)
+
+    # 如果项目在数据库中存在，直接返回数据库内容（支持 Railway 临时文件系统）
+    if db_meta:
+        db_content = db_meta.get("content", {}) if db_meta else {}
+
+        # 从数据库读取文档内容
+        market_analysis = db_content.get("market_analysis", "")
+        visual_research = db_content.get("visual_research", "")
+        design_proposals = db_content.get("design_proposals", "")
+        full_report = db_content.get("full_report", "")
+
+        # 扫描图片（如果文件系统存在）
+        images = []
+        if os.path.exists(project_dir):
+            try:
+                for f in os.listdir(project_dir):
+                    if f.lower().endswith((".jpg", ".jpeg", ".png")):
+                        images.append(f"/projects/{project_name}/{f}")
+                images.sort(
+                    key=lambda x: os.path.getmtime(
+                        os.path.join(project_dir, os.path.basename(x))
+                    ),
+                    reverse=True,
+                )
+            except:
+                pass
+
+        return {
+            "metadata": db_meta,
+            "market_analysis": market_analysis,
+            "visual_research": visual_research,
+            "design_proposals": design_proposals,
+            "full_report": full_report,
+            "images": images,
+        }
+
+    # 数据库中没有，尝试从文件系统读取（旧项目兼容）
+    if not os.path.exists(project_dir):
+        raise HTTPException(status_code=404, detail="Project not found")
 
     meta = get_metadata(project_dir)
 
