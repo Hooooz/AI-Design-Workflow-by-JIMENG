@@ -399,13 +399,20 @@ class DesignWorkflow:
                 try:
                     img_path = future.result()
                     if img_path:
-                        self.log(f"      -> 图片已保存: {os.path.basename(img_path)}")
-                        self.generated_images.append(img_path)
-
-                        # 更新内存中的 prompts_list
-                        # 构建前端可访问的相对路径
-                        rel_path = f"/projects/{os.path.basename(self.output_dir)}/{os.path.basename(img_path)}"
-                        prompts_list[idx]["image_path"] = rel_path
+                        # 检查是否是 Supabase Storage URL
+                        if img_path.startswith("http"):
+                            # 使用 Supabase Storage URL
+                            self.log(f"      -> 图片已保存到云端: {img_path[:80]}...")
+                            self.generated_images.append(img_path)
+                            prompts_list[idx]["image_path"] = img_path
+                        else:
+                            # 本地路径，构建相对路径
+                            self.log(
+                                f"      -> 图片已保存: {os.path.basename(img_path)}"
+                            )
+                            self.generated_images.append(img_path)
+                            rel_path = f"/projects/{os.path.basename(self.output_dir)}/{os.path.basename(img_path)}"
+                            prompts_list[idx]["image_path"] = rel_path
                 except Exception as e:
                     self.log(f"      -> 生成失败 (Index {idx}): {e}")
 

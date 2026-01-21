@@ -638,7 +638,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                     <div className="relative h-[300px] md:h-auto bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
                                         {item.image_path ? (
                                             <img 
-                                                src={`${API_URL}${item.image_path}`} 
+                                                src={item.image_path.startsWith('http') ? item.image_path : `${API_URL}${item.image_path}`} 
                                                 alt={item.scheme || item.concept || `Proposal ${i+1}`}
                                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                             />
@@ -785,7 +785,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                     {item.image_path && (
                                         <div className="mb-3 aspect-square overflow-hidden rounded-md bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800">
                                             <img 
-                                                src={`${API_URL}${item.image_path}`} 
+                                                src={item.image_path.startsWith('http') ? item.image_path : `${API_URL}${item.image_path}`} 
                                                 alt={item.concept || "Generated Image"}
                                                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                                             />
@@ -1289,11 +1289,20 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                     }
                                     
                                     return galleryItems.length > 0 ? (
-                                        galleryItems.map((item: ProposalItem & { src: string }, idx: number) => (
+                                        galleryItems.map((item: ProposalItem & { src: string }, idx: number) => {
+                                            // Handle both local paths and Supabase Storage URLs
+                                            const imageSrc = item.src.startsWith('http') 
+                                                ? item.src 
+                                                : `${API_URL}${item.src}`;
+                                            const downloadSrc = item.src.startsWith('http')
+                                                ? item.src
+                                                : `${API_URL}${item.src}`;
+                                            
+                                            return (
                                             <div key={idx} className="group relative bg-white dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
                                                 <div className="aspect-[4/5] overflow-hidden bg-zinc-100 dark:bg-zinc-800 relative">
                                                     <img 
-                                                        src={`${API_URL}${item.src}`} 
+                                                        src={imageSrc} 
                                                         alt={`Concept ${idx + 1}`}
                                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                                     />
@@ -1301,7 +1310,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                                         <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
                                                             <div className="flex gap-2 mt-4">
                                                                 <Button variant="secondary" size="sm" className="flex-1 font-bold text-[10px] uppercase tracking-wider" asChild>
-                                                                    <a href={`${API_URL}${item.src}`} download target="_blank">立即下载</a>
+                                                                    <a href={downloadSrc} download target="_blank">立即下载</a>
                                                                 </Button>
                                                                 <Button variant="secondary" size="icon" className="bg-white/20 backdrop-blur-md text-white border-none hover:bg-white/40">
                                                                     <ExternalLink className="h-4 w-4" />

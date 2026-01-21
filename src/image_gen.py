@@ -18,6 +18,15 @@ class ImageGenService:
         # 获取 Token
         self.jimeng_token = os.getenv("JIMENG_API_TOKEN", "").strip()
 
+        # Supabase Storage 配置
+        self.supabase_url = os.getenv("SUPABASE_URL", "").strip()
+        self.supabase_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+        self.supabase_bucket = "project-images"
+        self.use_storage = bool(self.supabase_url and self.supabase_key)
+
+        if self.use_storage:
+            print(f"ℹ️ Supabase Storage: 已配置")
+
         # 设置即梦模块路径 - 优先使用 src/jimeng（生产环境）
         self.jimeng_path = None
         jimeng_in_src = os.path.join(os.path.dirname(__file__), "jimeng")
@@ -74,6 +83,37 @@ class ImageGenService:
         except Exception:
             pass
 
+    def upload_to_supabase(self, local_path, project_name, filename):
+        """上传图片到 Supabase Storage"""
+        if not self.use_storage:
+            return None
+
+        try:
+            file_path = f"{project_name}/{filename}"
+            url = f"{self.supabase_url}/storage/v1/object/{self.supabase_bucket}/{file_path}"
+
+            with open(local_path, "rb") as f:
+                file_data = f.read()
+
+            headers = {
+                "Authorization": f"Bearer {self.supabase_key}",
+                "Content-Type": "image/jpeg",
+            }
+
+            response = requests.post(url, headers=headers, data=file_data, timeout=60)
+
+            if response.status_code in [200, 201]:
+                # 获取公开访问 URL
+                public_url = f"{self.supabase_url}/storage/v1/object/public/{self.supabase_bucket}/{file_path}"
+                print(f"✅ 已上传到 Supabase Storage: {file_path}")
+                return public_url
+            else:
+                print(f"❌ 上传失败: {response.status_code} - {response.text[:100]}")
+                return None
+        except Exception as e:
+            print(f"❌ Supabase 上传异常: {e}")
+            return None
+
     def generate_image(self, prompt, output_dir, session_id=None):
         """生成图片"""
         print(f"[{datetime.now().strftime('%H:%M:%S')}] 🎨 即梦生成: {prompt[:50]}...")
@@ -92,13 +132,19 @@ class ImageGenService:
         output_path = os.path.abspath(os.path.join(output_dir, filename))
 
         if self.mode == "direct":
-            return self._generate_direct(prompt, output_path, filename, session_id)
+            return self._generate_direct(
+                prompt, output_path, filename, session_id, output_dir
+            )
         elif self.mode == "http":
-            return self._generate_http(prompt, output_path, filename, session_id)
+            return self._generate_http(
+                prompt, output_path, filename, session_id, output_dir
+            )
         else:
             return None
 
-    def _generate_direct(self, prompt, output_path, filename, session_id=None):
+    def _generate_direct(
+        self, prompt, output_path, filename, session_id=None, output_dir=None
+    ):
         """直接调用即梦模块"""
         try:
             # 添加模块路径
@@ -132,7 +178,18 @@ class ImageGenService:
                 if response.status_code == 200:
                     with open(output_path, "wb") as f:
                         f.write(response.content)
-                    print(f"✅ 已保存: {output_path}")
+                    print(f"✅ 已保存本地: {output_path}")
+
+                    # 上传到 Supabase Storage
+                    project_name = (
+                        os.path.basename(output_dir) if output_dir else "unknown"
+                    )
+                    storage_url = self.upload_to_supabase(
+                        output_path, project_name, filename
+                    )
+
+                    if storage_url:
+                        return storage_url
                     return output_path
                 else:
                     print(f"❌ 下载失败: {response.status_code}")
@@ -143,7 +200,9 @@ class ImageGenService:
             print(f"❌ 导入失败: {e}")
             print(f"[DEBUG] 尝试 HTTP 模式...")
             self.mode = "http"
-            return self._generate_http(prompt, output_path, filename, session_id)
+            return self._generate_http(
+                prompt, output_path, filename, session_id, output_dir
+            )
 
         except Exception as e:
             print(f"❌ 调用失败: {type(e).__name__}: {e}")
@@ -152,7 +211,9 @@ class ImageGenService:
             traceback.print_exc()
             return None
 
-    def _generate_http(self, prompt, output_path, filename, session_id=None):
+    def _generate_http(
+        self, prompt, output_path, filename, session_id=None, output_dir=None
+    ):
         """HTTP 模式调用图片生成服务"""
         http_url = os.getenv("IMAGE_GEN_SERVER_URL", "").strip()
         if not http_url:
@@ -185,7 +246,18 @@ class ImageGenService:
                     src_path = result["images"][0]
                     if os.path.exists(src_path):
                         shutil.copy2(src_path, output_path)
-                        print(f"✅ 已保存: {output_path}")
+                        print(f"✅ 已保存本地: {output_path}")
+
+                        # 上传到 Supabase Storage
+                        project_name = (
+                            os.path.basename(output_dir) if output_dir else "unknown"
+                        )
+                        storage_url = self.upload_to_supabase(
+                            output_path, project_name, filename
+                        )
+
+                        if storage_url:
+                            return storage_url
                         return output_path
                 elif result.get("success") and result.get("image_path"):
                     # 兼容 image_path 格式
