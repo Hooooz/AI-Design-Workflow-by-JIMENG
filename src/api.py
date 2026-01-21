@@ -280,10 +280,22 @@ def save_intermediate_and_db(workflow, project_name: str, filename: str, content
         db_update_project(project_name, content=existing_content)
 
 
+def get_project_id(project_name: str) -> str:
+    """
+    根据项目名称生成一个稳定且安全的 ID（目前使用 MD5 前缀以保持一致性）
+    这样可以确保同一个名称始终映射到同一个安全文件夹，同时避免中文路径问题
+    """
+    import hashlib
+    return hashlib.md5(project_name.encode()).hexdigest()[:12]
+
+
 # Helper to get workflow instance
 def get_workflow(project_name: str, model_name: str):
     root_dir = os.path.dirname(os.path.abspath(__file__))
-    project_dir = os.path.join(os.path.dirname(root_dir), "projects", project_name)
+
+    # 核心修改：使用安全的 Project ID 组织文件夹
+    project_id = get_project_id(project_name)
+    project_dir = os.path.join(os.path.dirname(root_dir), "projects", project_id)
 
     is_new_project = False
     if not os.path.exists(project_dir):
@@ -298,7 +310,7 @@ def get_workflow(project_name: str, model_name: str):
             status="pending",
         )
         save_metadata(project_dir, meta)
-        # 同时写入数据库
+        # 同时写入数据库 (保持 project_name 为主键，但内容将以 ID 组织)
         db_create_project(project_name, "", model_name, [])
 
     config_path = os.path.join(os.path.dirname(root_dir), "CONFIG.md")
@@ -634,9 +646,16 @@ def fix_image_urls(images: List[str]) -> List[str]:
     fixed_images = []
     for img in images:
         if img.startswith("/projects/") and supabase_url:
-            # 转换 /projects/name/file.jpg 为 Supabase 公网 URL
-            path = img.replace("/projects/", "")
-            fixed_images.append(f"{supabase_url}/storage/v1/object/public/{bucket}/{path}")
+            # 关键修复：从 /projects/项目名/文件名 提取项目名，并转换为 MD5 ID
+            # 确保拉取路径与上传时的 MD5 逻辑一致
+            parts = img.replace("/projects/", "").split("/")
+            if len(parts) >= 2:
+                project_name = parts[0]
+                filename = parts[1]
+                project_id = get_project_id(project_name)
+                fixed_images.append(f"{supabase_url}/storage/v1/object/public/{bucket}/{project_id}/{filename}")
+            else:
+                fixed_images.append(img)
         else:
             fixed_images.append(img)
     return fixed_images
@@ -645,7 +664,10 @@ def fix_image_urls(images: List[str]) -> List[str]:
 @app.get("/api/project/{project_name}")
 def get_project(project_name: str):
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    project_dir = os.path.join(root_dir, "projects", project_name)
+
+    # 修复：使用一致的 ID 逻辑获取物理路径
+    project_id = get_project_id(project_name)
+    project_dir = os.path.join(root_dir, "projects", project_id)
 
     # 优先从数据库获取元数据
     db_meta = db_get_project(project_name)
