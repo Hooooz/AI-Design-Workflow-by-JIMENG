@@ -412,6 +412,89 @@ def migrate_images():
     return {"status": "success", "migrated_projects": migrated_count}
 
 
+@app.post("/api/admin/regenerate-missing-images")
+def regenerate_missing_images():
+    """
+    为图片丢失的项目重新生成图片
+    遍历所有项目，检查 design_proposals 中是否有 prompts，
+    如果有但图片不存在，则重新生成
+    """
+    projects = db_get_projects()
+    if not projects:
+        return {"status": "error", "message": "No projects found in database"}
+
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    workflow, _ = get_workflow("temp", "gemini-2.5-flash-lite")
+
+    regenerated_count = 0
+    missing_images_count = 0
+    skipped_count = 0
+    results = []
+
+    for project in projects:
+        project_name = project.get("project_name")
+        content = project.get("content", {})
+        design_proposals_str = content.get("design_proposals", "")
+
+        # 解析 design_proposals JSON
+        if not design_proposals_str or not design_proposals_str.startswith("{"):
+            skipped_count += 1
+            continue
+
+        try:
+            dp = json.loads(design_proposals_str)
+            prompts = dp.get("prompts", [])
+
+            if not prompts:
+                skipped_count += 1
+                continue
+
+            # 检查每个 prompt 是否有有效的图片路径
+            missing_prompts = []
+            for i, prompt in enumerate(prompts):
+                image_path = prompt.get("image_path", "")
+
+                # 检查图片路径是否有效（是 http URL 或本地文件存在）
+                is_valid = False
+                if image_path.startswith("http"):
+                    is_valid = True
+                elif image_path.startswith("/projects/"):
+                    # 检查本地文件是否存在
+                    local_path = os.path.join(
+                        root_dir, "projects", image_path.replace("/projects/", "")
+                    )
+                    is_valid = os.path.exists(local_path)
+
+                if not is_valid:
+                    missing_prompts.append({"index": i, "prompt": prompt})
+
+            if missing_prompts:
+                missing_images_count += len(missing_prompts)
+                results.append(
+                    {
+                        "project": project_name,
+                        "missing_count": len(missing_prompts),
+                        "status": "需要重新生成",
+                    }
+                )
+            else:
+                skipped_count += 1
+
+        except json.JSONDecodeError:
+            skipped_count += 1
+
+    return {
+        "status": "success",
+        "summary": {
+            "projects_checked": len(projects),
+            "projects_with_missing_images": len(results),
+            "total_missing_images": missing_images_count,
+            "skipped": skipped_count,
+        },
+        "projects": results,
+    }
+
+
 @app.get("/api/project/{project_name}")
 def get_project(project_name: str):
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
