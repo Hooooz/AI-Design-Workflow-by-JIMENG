@@ -216,10 +216,14 @@ class DesignWorkflow:
                             prompt, self.output_dir
                         )
                         if img_path:
-                            # 修复：使用相对于项目目录的路径，而不是仅文件名
-                            rel_path = os.path.relpath(img_path, self.output_dir)
+                            # 修复：如果是 Supabase URL，直接使用；如果是本地路径，才计算相对路径
+                            if img_path.startswith("http"):
+                                img_url = img_path
+                            else:
+                                img_url = os.path.relpath(img_path, self.output_dir)
+
                             final_content += (
-                                f"\n![{concept}]({rel_path})\n*图示：{concept}*\n"
+                                f"\n![{concept}]({img_url})\n*图示：{concept}*\n"
                             )
                             self.generated_images.append(img_path)
                             # 更新 data 中的 visuals 路径，以便前端可以直接使用

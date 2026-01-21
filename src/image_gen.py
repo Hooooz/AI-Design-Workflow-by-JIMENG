@@ -91,8 +91,8 @@ class ImageGenService:
         try:
             import hashlib
 
-            # 强制使用 MD5 哈希作为存储桶内的文件夹名，避免中文路径导致 Supabase 400 InvalidKey 错误
-            storage_folder = hashlib.md5(project_name.encode()).hexdigest()
+            # 强制使用 12 位 MD5 哈希作为存储桶内的文件夹名，与 api.py 中的 get_project_id 保持一致
+            storage_folder = hashlib.md5(project_name.encode()).hexdigest()[:12]
             file_path = f"{storage_folder}/{filename}"
             url = f"{self.supabase_url}/storage/v1/object/{self.supabase_bucket}/{file_path}"
 
