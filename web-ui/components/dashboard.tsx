@@ -55,10 +55,10 @@ interface ProposalItem {
 }
 
 const STEPS = [
-  { id: "market_analysis", label: "市场", icon: TrendingUp },
-  { id: "visual_research", label: "视觉", icon: Palette },
-  { id: "design_generation", label: "方案", icon: Sparkles },
-  { id: "image_generation", label: "图库", icon: ImageIcon },
+  { id: "market_analysis", label: "市场分析", icon: TrendingUp, estimatedTime: 15, description: "分析市场趋势与竞品" },
+  { id: "visual_research", label: "视觉研究", icon: Palette, estimatedTime: 12, description: "探索视觉风格与灵感" },
+  { id: "design_generation", label: "方案生成", icon: Sparkles, estimatedTime: 18, description: "生成创意设计方案" },
+  { id: "image_generation", label: "图片生成", icon: ImageIcon, estimatedTime: 45, description: "AI 绘制概念效果图" },
 ]
 
 export function Dashboard({ project, onProjectCreated }: DashboardProps) {
@@ -67,6 +67,10 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
   const [status, setStatus] = useState<string>("pending")
   const [currentStep, setCurrentStep] = useState<string>("")
   const [progress, setProgress] = useState(0)
+  const [stepStartTime, setStepStartTime] = useState<number | null>(null)
+  const [stepElapsedTime, setStepElapsedTime] = useState(0)
+  const [failedStep, setFailedStep] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string>("")
   
   // Form State
   const [projectName, setProjectName] = useState("拍立得相机包")
@@ -132,6 +136,25 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
   
   // Ref for polling interval
   const pollIntervalRef = useState<{ current: NodeJS.Timeout | null }>({ current: null })[0]
+  const timerIntervalRef = useState<{ current: NodeJS.Timeout | null }>({ current: null })[0]
+
+  // Timer effect for step elapsed time
+  useEffect(() => {
+    if (status === "in_progress" && currentStep) {
+      setStepStartTime(Date.now())
+      setStepElapsedTime(0)
+
+      timerIntervalRef.current = setInterval(() => {
+        setStepElapsedTime(prev => prev + 1)
+      }, 1000)
+
+      return () => {
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
+      }
+    } else {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current)
+    }
+  }, [currentStep, status])
 
   // Load settings from local storage
   useEffect(() => {
@@ -428,8 +451,12 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
   const handleRunAll = async () => {
     setLoading(true)
     setStatus("in_progress")
+    setCurrentStep("market_analysis")
     setProgress(5)
-    
+    setFailedStep(null)
+    setErrorMessage("")
+    setStepElapsedTime(0)
+
     try {
       const res = await fetchWithRetry(`${API_URL}/api/workflow/run_all`, {
         method: "POST",
@@ -445,15 +472,19 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
           }
         })
       }, 3)
-      
+
       if (res.ok) {
         console.log("全流程任务已提交后台运行")
         onProjectCreated(projectName)
       } else {
-        throw new Error("Failed to start workflow")
+        const errorData = await res.json().catch(() => ({}))
+        throw new Error(errorData.detail || `HTTP ${res.status}`)
       }
     } catch (e) {
+      const error = e instanceof Error ? e : new Error(String(e))
       setStatus("failed")
+      setFailedStep(currentStep || "market_analysis")
+      setErrorMessage(error.message || "网络请求失败，请检查网络连接")
       console.error("运行失败:", e)
       setLoading(false)
     }
@@ -1073,51 +1104,112 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
     </div>
   )
 
-  const renderLoading = () => (
+  const renderLoading = () => {
+    const currentStepInfo = STEPS.find(s => s.id === currentStep)
+    const currentStepIndex = STEPS.findIndex(s => s.id === currentStep)
+    const estimatedTime = currentStepInfo?.estimatedTime || 15
+    const remainingTime = Math.max(0, estimatedTime - stepElapsedTime)
+
+    // Calculate overall progress based on completed steps
+    const stepProgress = currentStepIndex >= 0 ? (currentStepIndex / STEPS.length) * 100 : 0
+    const withinStepProgress = Math.min(100, (stepElapsedTime / estimatedTime) * 100) / STEPS.length
+    const totalProgress = Math.min(95, stepProgress + withinStepProgress)
+
+    return (
     <div className="flex-1 flex flex-col items-center justify-start p-6 overflow-y-auto custom-scrollbar bg-zinc-50/50 dark:bg-zinc-950">
-        <div className="max-w-md w-full text-center space-y-8 my-auto py-8">
+        <div className="max-w-lg w-full text-center space-y-8 my-auto py-8">
+            {/* Animated Circle Progress */}
             <div className="relative flex items-center justify-center">
-                <div className="w-24 h-24 rounded-full border-4 border-zinc-100 dark:border-zinc-800"></div>
-                <div className="absolute w-24 h-24 rounded-full border-4 border-t-zinc-900 border-r-transparent border-b-transparent border-l-transparent animate-spin dark:border-t-zinc-100"></div>
-                <div className="absolute flex flex-col items-center">
-                    <span className="text-2xl font-display font-bold text-zinc-900 dark:text-white">{progress}%</span>
-                </div>
-            </div>
-
-            <div className="space-y-2">
-                <h2 className="text-xl font-display font-bold text-zinc-900 dark:text-white tracking-tight">
-                    正在生成设计方案...
-                </h2>
-                <p className="text-xs text-zinc-500">
-                    当前项目: {projectName}
-                </p>
-            </div>
-
-            <div className="space-y-4">
-                <div className="w-full bg-zinc-200 dark:bg-zinc-800 h-1 rounded-full overflow-hidden">
-                    <div 
-                        className="bg-zinc-900 h-full rounded-full transition-all duration-500 dark:bg-zinc-100" 
-                        style={{ width: `${progress}%` }}
+                <div className="w-28 h-28 rounded-full border-4 border-zinc-100 dark:border-zinc-800"></div>
+                <svg className="absolute w-28 h-28 -rotate-90">
+                    <circle
+                        cx="56"
+                        cy="56"
+                        r="52"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        strokeDasharray={`${totalProgress * 3.27} 327`}
+                        className="text-zinc-900 dark:text-zinc-100 transition-all duration-500"
                     />
+                </svg>
+                <div className="absolute flex flex-col items-center">
+                    <span className="text-3xl font-display font-bold text-zinc-900 dark:text-white">{Math.round(totalProgress)}%</span>
                 </div>
-                
-                <div className="grid grid-cols-2 gap-y-3 gap-x-6">
+            </div>
+
+            {/* Current Step Info */}
+            <div className="space-y-3">
+                <h2 className="text-xl font-display font-bold text-zinc-900 dark:text-white tracking-tight">
+                    {currentStepInfo?.description || "正在准备..."}
+                </h2>
+                <p className="text-sm text-zinc-500">
+                    项目: <span className="font-medium text-zinc-700 dark:text-zinc-300">{projectName}</span>
+                </p>
+
+                {/* Time Estimate */}
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-sm font-medium">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>
+                        已用时 {stepElapsedTime}s
+                        {remainingTime > 0 && ` · 预计还需 ${remainingTime}s`}
+                    </span>
+                </div>
+            </div>
+
+            {/* Step Progress List */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-sm">
+                <div className="space-y-3">
                     {STEPS.map((s, i) => {
-                        const isDone = progress > (i + 1) * 20 || status === "completed"
+                        const isDone = i < currentStepIndex || status === "completed"
                         const isCurrent = currentStep === s.id
+                        const isPending = i > currentStepIndex
+
                         return (
                             <div key={s.id} className={cn(
-                                "flex items-center gap-2 text-[10px] font-medium transition-colors",
-                                isDone ? "text-emerald-600" : isCurrent ? "text-zinc-900 dark:text-white" : "text-zinc-400"
+                                "flex items-center gap-3 p-3 rounded-lg transition-all",
+                                isCurrent ? "bg-zinc-50 dark:bg-zinc-800" : ""
                             )}>
-                                {isDone ? (
-                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                ) : isCurrent ? (
-                                    <CircleDashed className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                    <div className="w-3.5 h-3.5 rounded-full border-2 border-current opacity-20" />
+                                {/* Status Icon */}
+                                <div className={cn(
+                                    "flex items-center justify-center w-8 h-8 rounded-full transition-colors",
+                                    isDone ? "bg-emerald-100 dark:bg-emerald-900/30" :
+                                    isCurrent ? "bg-blue-100 dark:bg-blue-900/30" :
+                                    "bg-zinc-100 dark:bg-zinc-800"
+                                )}>
+                                    {isDone ? (
+                                        <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                    ) : isCurrent ? (
+                                        <Loader2 className="h-4 w-4 text-blue-600 dark:text-blue-400 animate-spin" />
+                                    ) : (
+                                        <s.icon className="h-4 w-4 text-zinc-400" />
+                                    )}
+                                </div>
+
+                                {/* Step Info */}
+                                <div className="flex-1 text-left">
+                                    <div className={cn(
+                                        "font-medium text-sm",
+                                        isDone ? "text-emerald-600 dark:text-emerald-400" :
+                                        isCurrent ? "text-zinc-900 dark:text-white" :
+                                        "text-zinc-400"
+                                    )}>
+                                        {s.label}
+                                    </div>
+                                    <div className="text-xs text-zinc-400">
+                                        {isDone ? "已完成" : isCurrent ? `进行中...` : `预计 ${s.estimatedTime}s`}
+                                    </div>
+                                </div>
+
+                                {/* Progress Bar for Current Step */}
+                                {isCurrent && (
+                                    <div className="w-20 h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+                                        <div
+                                            className="h-full bg-blue-500 rounded-full transition-all duration-1000"
+                                            style={{ width: `${Math.min(100, (stepElapsedTime / estimatedTime) * 100)}%` }}
+                                        />
+                                    </div>
                                 )}
-                                <span>{s.label}</span>
                             </div>
                         )
                     })}
@@ -1126,6 +1218,7 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
         </div>
     </div>
   )
+  }
 
   const renderResults = () => (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-zinc-50/50 dark:bg-zinc-950">
@@ -1378,37 +1471,76 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
   if (status === "failed") {
       return (
         <div className="flex-1 flex flex-col items-center justify-center p-6 bg-zinc-50/50 dark:bg-zinc-950">
-            <div className="text-center space-y-4 max-w-md">
-                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto">
-                    <Zap className="h-8 w-8 text-red-500" />
+            <div className="text-center space-y-6 max-w-md">
+                <div className="w-20 h-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto">
+                    <Zap className="h-10 w-10 text-red-500" />
                 </div>
-                <h3 className="text-xl font-display font-bold text-zinc-900 dark:text-white">
-                    任务运行失败
-                </h3>
-                <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-                    后端服务暂时无法响应，可能是因为 API Key 配置错误或网络超时。
-                </p>
+                <div className="space-y-2">
+                    <h3 className="text-2xl font-display font-bold text-zinc-900 dark:text-white">
+                        任务运行失败
+                    </h3>
+                    <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
+                        {errorMessage || "后端服务暂时无法响应，可能是因为 API 配置错误或网络超时。"}
+                    </p>
+                </div>
+
+                {/* Failed Step Info */}
+                {failedStep && (
+                    <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-xl p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                                {(() => {
+                                    const step = STEPS.find(s => s.id === failedStep)
+                                    return step ? <step.icon className="h-5 w-5 text-red-500" /> : null
+                                })()}
+                            </div>
+                            <div className="text-left">
+                                <div className="font-medium text-red-700 dark:text-red-400 text-sm">
+                                    失败步骤: {STEPS.find(s => s.id === failedStep)?.label || failedStep}
+                                </div>
+                                <div className="text-xs text-red-500/70">
+                                    {STEPS.find(s => s.id === failedStep)?.description}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex gap-4 justify-center pt-4">
-                    <Button variant="outline" onClick={() => {
-                        setStatus("pending")
-                        setProjectName("")
-                        setBrief("")
-                        // Reload page to reset state completely
-                        window.location.reload()
-                    }}>
+                    <Button
+                        variant="outline"
+                        className="px-6"
+                        onClick={() => {
+                            setStatus("pending")
+                            setFailedStep(null)
+                            setErrorMessage("")
+                            window.location.reload()
+                        }}
+                    >
                         返回首页
                     </Button>
-                    <Button onClick={() => {
-                        // Retry the last step? Currently we just reset to home for simplicity
-                        // or user can try to run again if we kept the state
-                        setStatus("pending")
-                    }}>
-                        重试
+                    <Button
+                        className="px-6 bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
+                        onClick={() => {
+                            setStatus("pending")
+                            setFailedStep(null)
+                            setErrorMessage("")
+                            // Retry the full workflow
+                            handleRunAll()
+                        }}
+                    >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        重新运行
                     </Button>
                 </div>
             </div>
         </div>
       )
+  }
+
+  // Show loading screen when in_progress
+  if (status === "in_progress" && currentStep) {
+      return renderLoading()
   }
 
   return renderResults()
