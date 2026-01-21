@@ -493,10 +493,17 @@ class DesignWorkflow:
             # 保存图片列表到数据库
             if self.generated_images:
                 # 构建前端可访问的图片路径
-                image_paths = [
-                    f"/projects/{os.path.basename(self.output_dir)}/{os.path.basename(p)}"
-                    for p in self.generated_images
-                ]
+                # 注意：如果是 Supabase URL，直接使用；如果是本地路径，构建相对路径
+                image_paths = []
+                for p in self.generated_images:
+                    if p.startswith("http"):
+                        # Supabase Storage URL，直接使用
+                        image_paths.append(p)
+                    else:
+                        # 本地路径，构建相对路径
+                        image_paths.append(
+                            f"/projects/{os.path.basename(self.output_dir)}/{os.path.basename(p)}"
+                        )
                 api_module.save_project_images(
                     os.path.basename(self.output_dir), image_paths
                 )
