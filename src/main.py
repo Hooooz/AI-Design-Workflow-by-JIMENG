@@ -130,9 +130,21 @@ class DesignWorkflow:
             self.step_image_generation(design_prompts)
             self.log("✅ 图片生成完成")
 
-            # Step 5: 生成报告
+            # Step 5: 生成报告（重新读取包含图片路径的 JSON）
+            self.log("📝 正在生成最终设计报告...")
+            # 重新读取更新后的 JSON（包含 image_path）
+            json_path = os.path.join(self.output_dir, "3_Design_Proposals.json")
+            if os.path.exists(json_path):
+                with open(json_path, "r", encoding="utf-8") as f:
+                    updated_design_data = json.load(f)
+                # 转换为 JSON 字符串，与 step_design_generation 的返回格式一致
+                design_proposals_with_images = json.dumps(updated_design_data, ensure_ascii=False)
+            else:
+                # 如果 JSON 不存在，使用原始数据
+                design_proposals_with_images = design_proposals
+
             report_path = self._save_report(
-                product_brief, market_analysis, visual_research, design_proposals
+                product_brief, market_analysis, visual_research, design_proposals_with_images
             )
             self.log(f"📄 完整设计报告已保存至: {report_path}")
 
