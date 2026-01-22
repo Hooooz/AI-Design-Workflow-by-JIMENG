@@ -89,10 +89,10 @@ class ImageGenService:
             return None
 
         try:
-            import hashlib
+            from services.db_service import get_project_id
 
-            # 强制使用 12 位 MD5 哈希作为存储桶内的文件夹名，与 api.py 中的 get_project_id 保持一致
-            storage_folder = hashlib.md5(project_name.encode()).hexdigest()[:12]
+            # 统一使用 db_service 中的 ID 生成逻辑
+            storage_folder = get_project_id(project_name)
             file_path = f"{storage_folder}/{filename}"
             url = f"{self.supabase_url}/storage/v1/object/{self.supabase_bucket}/{file_path}"
 
