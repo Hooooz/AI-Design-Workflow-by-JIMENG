@@ -13,7 +13,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import config
 from main import DesignWorkflow
 from services import db_service
+from core.config_manager import config_manager
 from task_manager import TaskRegistry, compute_dedup_key, normalize_text
+from llm_wrapper import LLMService
 
 app = FastAPI(title="AI Design Workflow API (Cloud Only)")
 task_registry = TaskRegistry()
@@ -40,7 +42,11 @@ class StepRequest(BaseModel):
     context: Optional[Dict[str, Any]] = {}
     settings: Optional[Dict[str, Any]] = {}
 
-# API Endpoints
+class AutocompleteRequest(BaseModel):
+    brief: str
+    model_name: str = "gemini-2.5-flash"
+
+# --- Project Management ---
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "storage": "supabase_only", "timestamp": time.time()}
@@ -48,6 +54,21 @@ def health_check():
 @app.get("/api/projects")
 def list_projects(limit: int = 50):
     return db_service.db_get_projects(limit=limit)
+
+@app.post("/api/project/create")
+def create_project(req: ProjectCreate):
+    existing = db_service.db_get_project(req.project_name)
+    if existing:
+        return existing
+
+    new_proj = db_service.db_create_project(
+        project_name=req.project_name,
+        brief=req.brief,
+        model_name=req.model_name
+    )
+    if not new_proj:
+        raise HTTPException(status_code=500, detail="Failed to create project")
+    return new_proj
 
 @app.get("/api/project/{project_name}")
 def get_project(project_name: str):
@@ -73,6 +94,30 @@ def get_project(project_name: str):
     }
 
     return response
+
+# --- AI Assistance ---
+
+@app.post("/api/ai/autocomplete")
+def ai_autocomplete(req: AutocompleteRequest):
+    llm = LLMService(api_key=config_manager.openai_api_key, base_url=config_manager.openai_base_url)
+    prompt_tpl = config_manager.get_prompt("autocomplete", "请根据以下简要描述扩展为专业设计需求：\n{brief}")
+    prompt = prompt_tpl.format(brief=req.brief)
+
+    response = llm.chat_completion([{"role": "user", "content": prompt}])
+    return {"expanded_brief": response.strip()}
+
+@app.post("/api/ai/tags")
+def ai_tags(req: AutocompleteRequest):
+    llm = LLMService(api_key=config_manager.openai_api_key, base_url=config_manager.openai_base_url)
+    prompt_tpl = config_manager.get_prompt("tags", "请为以下需求提取3-5个标签（如 #简约 #科技）：\n{brief}")
+    prompt = prompt_tpl.format(brief=req.brief)
+
+    response = llm.chat_completion([{"role": "user", "content": prompt}])
+    # Clean tags
+    tags = [t.strip() for t in response.replace("[", "").replace("]", "").replace('"', "").split(",") if "#" in t]
+    return {"tags": tags}
+
+# --- Workflow Execution ---
 
 @app.post("/api/workflow/step")
 def run_step(req: StepRequest):
