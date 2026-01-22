@@ -59,7 +59,20 @@ def get_project(project_name: str):
     if "images" in project:
         project["images"] = db_service.fix_image_urls(project["images"])
 
-    return project
+    # 构造前端预期的结构：将基本信息放入 metadata
+    metadata_fields = ["project_name", "brief", "model_name", "creation_time", "status", "current_step", "tags"]
+    metadata = {k: project.get(k) for k in metadata_fields if k in project}
+
+    response = {
+        "metadata": metadata,
+        "market_analysis": project.get("market_analysis", ""),
+        "visual_research": project.get("visual_research", ""),
+        "design_proposals": project.get("design_proposals", ""),
+        "full_report": project.get("full_report", ""),
+        "images": project.get("images", [])
+    }
+
+    return response
 
 @app.post("/api/workflow/step")
 def run_step(req: StepRequest):
