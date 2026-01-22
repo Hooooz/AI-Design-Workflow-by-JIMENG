@@ -119,6 +119,64 @@ def ai_tags(req: AutocompleteRequest):
 
 # --- Workflow Execution ---
 
+class RunAllRequest(BaseModel):
+    project_name: str
+    brief: str
+    model_name: str = "gemini-2.5-flash"
+    image_count: int = 4
+    persona: str = ""
+
+@app.post("/api/workflow/run_all")
+def run_all_workflow(req: RunAllRequest):
+    """一键执行完整设计工作流：市场分析 → 视觉研究 → 方案生成 → 图片生成"""
+    dedup_key = compute_dedup_key("run_all", req.dict())
+    entry, created = task_registry.get_or_create("run_all", dedup_key)
+
+    if not created:
+        waited = task_registry.wait(entry.task_id, timeout_s=900)
+        return waited.result if waited else {"status": "timeout"}
+
+    try:
+        start_time = time.time()
+        workflow = DesignWorkflow(project_name=req.project_name)
+
+        # Step 1: Market Analysis
+        db_service.db_update_project(req.project_name, status="in_progress", current_step="market_analysis")
+        market_result, _ = workflow.step_market_analysis(req.brief)
+
+        # Step 2: Visual Research
+        db_service.db_update_project(req.project_name, current_step="visual_research")
+        visual_result, _ = workflow.step_visual_research(req.brief, market_result)
+
+        # Step 3: Design Generation
+        db_service.db_update_project(req.project_name, current_step="design_generation")
+        design_result, prompts = workflow.step_design_generation(
+            req.brief, market_result, visual_result,
+            image_count=req.image_count, persona=req.persona
+        )
+
+        # Step 4: Image Generation
+        db_service.db_update_project(req.project_name, current_step="image_generation")
+        workflow.step_image_generation(prompts)
+
+        # Mark as completed
+        db_service.db_update_project(req.project_name, status="completed", current_step="")
+
+        duration_ms = int((time.time() - start_time) * 1000)
+        task_result = {
+            "status": "success",
+            "project_name": req.project_name,
+            "duration_ms": duration_ms,
+            "steps_completed": ["market_analysis", "visual_research", "design_generation", "image_generation"]
+        }
+        task_registry.complete(entry.task_id, result=task_result, duration_ms=duration_ms)
+        return task_result
+
+    except Exception as e:
+        db_service.db_update_project(req.project_name, status="failed")
+        task_registry.fail(entry.task_id, str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/workflow/step")
 def run_step(req: StepRequest):
     # 任务去重逻辑保持不变
