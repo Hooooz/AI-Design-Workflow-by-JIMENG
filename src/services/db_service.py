@@ -40,8 +40,18 @@ def fix_image_urls(images: List[str]) -> List[str]:
         if not img:
             continue
 
-        # 如果已经是公网 URL，直接保留
-        if img.startswith("http"):
+        # 处理旧的 IP 访问地址: http://47.89.249.90:8000/projects/{project_name}/{file}
+        if "47.89.249.90" in img and "/projects/" in img:
+            parts = img.split("/projects/")[-1].split("/")
+            if len(parts) >= 2:
+                # 提取项目名并生成 ID
+                project_id = get_project_id(parts[0])
+                filename = parts[1]
+                fixed_images.append(f"{supabase_url}/storage/v1/object/public/{bucket}/{project_id}/{filename}")
+                continue
+
+        # 如果已经是正确的 Supabase 公网 URL，直接保留
+        if img.startswith("http") and "supabase.co" in img:
             fixed_images.append(img)
             continue
 
