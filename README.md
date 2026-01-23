@@ -14,6 +14,21 @@
 - 📊 **配置检查**: 运行 `python3 scripts/check_config.py` 检查配置
 - 🚀 **性能优化**: 并发控制、超时保护
 
+## Docker 部署 (推荐)
+
+项目支持通过 Docker 快速部署，支持全本地存储：
+
+1. **环境配置**:
+   修改 `.env` 文件，设置 `OPENAI_API_KEY` 和 `JIMENG_API_TOKEN`。
+
+2. **启动服务**:
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **访问**:
+   后端服务将运行在 `http://localhost:8000`。所有项目数据将保存在本地 `projects/` 目录。
+
 ## 快速开始
 
 ### 1. 环境准备
