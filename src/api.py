@@ -76,9 +76,24 @@ def get_project(project_name: str):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # 修正图片 URL
+    # 修正图片 URL（顶层 images 数组）
     if "images" in project:
         project["images"] = db_service.fix_image_urls(project["images"])
+
+    # 修正 design_proposals JSON 内部的 image_path 字段
+    design_proposals = project.get("design_proposals", "")
+    if design_proposals:
+        try:
+            dp_data = json.loads(design_proposals)
+            if "prompts" in dp_data and isinstance(dp_data["prompts"], list):
+                for prompt in dp_data["prompts"]:
+                    if "image_path" in prompt and prompt["image_path"]:
+                        # 修复 image_path 为完整 Supabase URL
+                        fixed_urls = db_service.fix_image_urls([prompt["image_path"]])
+                        prompt["image_path"] = fixed_urls[0] if fixed_urls else prompt["image_path"]
+                design_proposals = json.dumps(dp_data, ensure_ascii=False)
+        except (json.JSONDecodeError, TypeError):
+            pass  # 保持原样
 
     # 构造前端预期的结构：将基本信息放入 metadata
     metadata_fields = ["project_name", "brief", "model_name", "creation_time", "status", "current_step", "tags"]
@@ -88,7 +103,7 @@ def get_project(project_name: str):
         "metadata": metadata,
         "market_analysis": project.get("market_analysis", ""),
         "visual_research": project.get("visual_research", ""),
-        "design_proposals": project.get("design_proposals", ""),
+        "design_proposals": design_proposals,
         "full_report": project.get("full_report", ""),
         "images": project.get("images", [])
     }
