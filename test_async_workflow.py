@@ -14,7 +14,7 @@ def test_async_workflow():
     payload = {
         "project_name": TEST_PROJECT_NAME,
         "brief": "设计一款未来感的透明智能手机",
-        "model_name": "gemini-2.5-flash-lite",
+        "model_name": "gemini-2.5-flash",
         "settings": {
             "image_count": 1,
             "persona": "科技极客"

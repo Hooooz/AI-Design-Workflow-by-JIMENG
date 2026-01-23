@@ -1,4 +1,16 @@
 import os
+import logging
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler("api.log")
+    ]
+)
+logger = logging.getLogger("design-workflow")
 
 # 环境配置: 'production' 或 'development'
 ENV = os.getenv("ENV", "development")
@@ -25,11 +37,9 @@ OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "http://47.89.249.90:8000/openai/
 
 # 模型配置
 # 优先级列表：自动降级策略 (Failover Strategy)
-# 用户指定顺序 (2025-02-12)
+# 回退到稳健策略 (2025-02-12)
 MODEL_PRIORITY_LIST = [
-    "gemini-3.0-flash",
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",        # 用户指定测试模型
 ]
 
 # 默认模型（取列表第一个）

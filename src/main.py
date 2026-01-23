@@ -14,7 +14,8 @@ from llm_wrapper import LLMService
 from image_gen import ImageGenService
 import config
 from core.config_manager import config_manager
-from services import db_service
+from config import logger
+from services.project_service import ProjectService
 
 class DesignWorkflowError(Exception):
     """设计工作流基础异常类"""
@@ -51,7 +52,7 @@ class DesignWorkflow:
         return "暂无外部知识库。"
 
     def log(self, message):
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
+        logger.info(message)
 
     def _get_prompt(self, agent_name, default_template, **kwargs):
         template = config_manager.get_prompt(agent_name, default_template)
@@ -139,7 +140,8 @@ class DesignWorkflow:
                     self.generated_images.append(img_url)
 
         if not skip_json_update:
-            db_service.db_update_project(self.project_name, images=self.generated_images)
+            fixed_images = ProjectService.fix_image_urls(self.generated_images)
+            db_service.db_update_project(self.project_name, images=fixed_images)
 
     def _save_intermediate(self, filename, content):
         if not self.project_name: return
