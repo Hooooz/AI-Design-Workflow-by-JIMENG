@@ -72,7 +72,7 @@ export function HomeClient({ initialProjects }: HomeClientProps) {
     if (hasInProgressRef.current) {
       const interval = setInterval(() => {
         fetchProjects()
-      }, 10000)
+      }, 30000)
       return () => clearInterval(interval)
     }
   }, [fetchProjects])

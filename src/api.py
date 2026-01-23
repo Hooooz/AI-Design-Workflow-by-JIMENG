@@ -30,11 +30,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Models
 class ProjectCreate(BaseModel):
     project_name: str
     brief: str
     model_name: str = config.DEFAULT_MODEL
+
 
 class StepRequest(BaseModel):
     project_name: str
@@ -44,18 +46,22 @@ class StepRequest(BaseModel):
     context: Optional[Dict[str, Any]] = {}
     settings: Optional[Dict[str, Any]] = {}
 
+
 class AutocompleteRequest(BaseModel):
     brief: str
     model_name: str = config.DEFAULT_MODEL
+
 
 # --- Project Management ---
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "storage": "supabase_only", "timestamp": time.time()}
 
+
 @app.get("/api/projects")
 def list_projects(limit: int = 50):
     return db_service.db_get_projects(limit=limit)
+
 
 @app.post("/api/project/create")
 def create_project(req: ProjectCreate):
@@ -64,13 +70,12 @@ def create_project(req: ProjectCreate):
         return existing
 
     new_proj = db_service.db_create_project(
-        project_name=req.project_name,
-        brief=req.brief,
-        model_name=req.model_name
+        project_name=req.project_name, brief=req.brief, model_name=req.model_name
     )
     if not new_proj:
         raise HTTPException(status_code=500, detail="Failed to create project")
     return new_proj
+
 
 @app.get("/api/project/{project_name}")
 def get_project(project_name: str):
@@ -81,29 +86,46 @@ def get_project(project_name: str):
     processed_project = ProjectService.process_project_data(project)
     return processed_project
 
+
 # --- AI Assistance ---
+
 
 @app.post("/api/ai/autocomplete")
 def ai_autocomplete(req: AutocompleteRequest):
-    llm = LLMService(api_key=config_manager.openai_api_key, base_url=config_manager.openai_base_url)
-    prompt_tpl = config_manager.get_prompt("autocomplete", "请根据以下简要描述扩展为专业设计需求：\n{brief}")
+    llm = LLMService(
+        api_key=config_manager.openai_api_key, base_url=config_manager.openai_base_url
+    )
+    prompt_tpl = config_manager.get_prompt(
+        "autocomplete", "请根据以下简要描述扩展为专业设计需求：\n{brief}"
+    )
     prompt = prompt_tpl.format(brief=req.brief)
 
     response = llm.chat_completion([{"role": "user", "content": prompt}])
     return {"expanded_brief": response.strip()}
 
+
 @app.post("/api/ai/tags")
 def ai_tags(req: AutocompleteRequest):
-    llm = LLMService(api_key=config_manager.openai_api_key, base_url=config_manager.openai_base_url)
-    prompt_tpl = config_manager.get_prompt("tags", "请为以下需求提取3-5个标签（如 #简约 #科技）：\n{brief}")
+    llm = LLMService(
+        api_key=config_manager.openai_api_key, base_url=config_manager.openai_base_url
+    )
+    prompt_tpl = config_manager.get_prompt(
+        "tags", "请为以下需求提取3-5个标签（如 #简约 #科技）：\n{brief}"
+    )
     prompt = prompt_tpl.format(brief=req.brief)
 
     response = llm.chat_completion([{"role": "user", "content": prompt}])
     # Clean tags
-    tags = [t.strip() for t in response.replace("[", "").replace("]", "").replace('"', "").split(",") if "#" in t]
+    tags = [
+        t.strip()
+        for t in response.replace("[", "").replace("]", "").replace('"', "").split(",")
+        if "#" in t
+    ]
     return {"tags": tags}
 
+
 # --- Workflow Execution ---
+
 
 class RunAllRequest(BaseModel):
     project_name: str
@@ -112,29 +134,43 @@ class RunAllRequest(BaseModel):
     image_count: int = 4
     persona: str = ""
 
+
 def _run_all_background(task_id: str, req: RunAllRequest):
     """后台执行完整工作流"""
     try:
         start_time = time.time()
-        # 传入用户指定的模型
         workflow = DesignWorkflow(
             project_name=req.project_name,
-            custom_config={"DEFAULT_MODEL": req.model_name}
+            custom_config={"DEFAULT_MODEL": req.model_name},
         )
 
         # Step 1: Market Analysis
-        db_service.db_update_project(req.project_name, status="in_progress", current_step="market_analysis")
+        db_service.db_update_project(
+            req.project_name, status="in_progress", current_step="market_analysis"
+        )
         market_result, _ = workflow.step_market_analysis(req.brief)
+        db_service.save_project_content(
+            req.project_name, {"market_analysis": market_result}
+        )
 
         # Step 2: Visual Research
         db_service.db_update_project(req.project_name, current_step="visual_research")
         visual_result, _ = workflow.step_visual_research(req.brief, market_result)
+        db_service.save_project_content(
+            req.project_name, {"visual_research": visual_result}
+        )
 
         # Step 3: Design Generation
         db_service.db_update_project(req.project_name, current_step="design_generation")
         design_result, prompts = workflow.step_design_generation(
-            req.brief, market_result, visual_result,
-            image_count=req.image_count, persona=req.persona
+            req.brief,
+            market_result,
+            visual_result,
+            image_count=req.image_count,
+            persona=req.persona,
+        )
+        db_service.save_project_content(
+            req.project_name, {"design_proposals": design_result}
         )
 
         # Step 4: Image Generation
@@ -142,14 +178,21 @@ def _run_all_background(task_id: str, req: RunAllRequest):
         workflow.step_image_generation(prompts)
 
         # Mark as completed
-        db_service.db_update_project(req.project_name, status="completed", current_step="")
+        db_service.db_update_project(
+            req.project_name, status="completed", current_step=""
+        )
 
         duration_ms = int((time.time() - start_time) * 1000)
         task_result = {
             "status": "success",
             "project_name": req.project_name,
             "duration_ms": duration_ms,
-            "steps_completed": ["market_analysis", "visual_research", "design_generation", "image_generation"]
+            "steps_completed": [
+                "market_analysis",
+                "visual_research",
+                "design_generation",
+                "image_generation",
+            ],
         }
         task_registry.complete(task_id, result=task_result, duration_ms=duration_ms)
         print(f"✅ 后台任务完成: {req.project_name}")
@@ -159,6 +202,7 @@ def _run_all_background(task_id: str, req: RunAllRequest):
         db_service.db_update_project(req.project_name, status="failed")
         task_registry.fail(task_id, str(e))
 
+
 @app.post("/api/workflow/run_all")
 def run_all_workflow(req: RunAllRequest, background_tasks: BackgroundTasks):
     """一键执行完整设计工作流（异步后台模式）"""
@@ -166,9 +210,7 @@ def run_all_workflow(req: RunAllRequest, background_tasks: BackgroundTasks):
     existing = db_service.db_get_project(req.project_name)
     if not existing:
         db_service.db_create_project(
-            project_name=req.project_name,
-            brief=req.brief,
-            model_name=req.model_name
+            project_name=req.project_name, brief=req.brief, model_name=req.model_name
         )
 
     # 2. 注册任务
@@ -176,10 +218,16 @@ def run_all_workflow(req: RunAllRequest, background_tasks: BackgroundTasks):
     entry, created = task_registry.get_or_create("run_all", dedup_key)
 
     if not created:
-        return {"status": "in_progress", "message": "Task already running", "task_id": entry.task_id}
+        return {
+            "status": "in_progress",
+            "message": "Task already running",
+            "task_id": entry.task_id,
+        }
 
     # 3. 立即更新状态为进行中
-    db_service.db_update_project(req.project_name, status="in_progress", current_step="starting")
+    db_service.db_update_project(
+        req.project_name, status="in_progress", current_step="starting"
+    )
 
     # 4. 添加后台任务
     background_tasks.add_task(_run_all_background, entry.task_id, req)
@@ -189,13 +237,14 @@ def run_all_workflow(req: RunAllRequest, background_tasks: BackgroundTasks):
         "status": "pending",
         "message": "Workflow started in background",
         "project_name": req.project_name,
-        "task_id": entry.task_id
+        "task_id": entry.task_id,
     }
+
 
 @app.post("/api/workflow/step")
 def run_step(req: StepRequest):
     # 任务去重逻辑保持不变
-    dedup_key = compute_dedup_key(f"step:{req.step}", req.dict())
+    dedup_key = compute_dedup_key(f"step:{req.step}", req.model_dump())
     entry, created = task_registry.get_or_create(f"step:{req.step}", dedup_key)
 
     if not created:
@@ -210,27 +259,38 @@ def run_step(req: StepRequest):
         prompts = []
 
         # 更新项目状态
-        db_service.db_update_project(req.project_name, status="in_progress", current_step=req.step)
+        db_service.db_update_project(
+            req.project_name, status="in_progress", current_step=req.step
+        )
 
         if req.step == "market_analysis":
             result, _ = workflow.step_market_analysis(req.brief)
         elif req.step == "visual_research":
-            result, _ = workflow.step_visual_research(req.brief, req.context.get("market_analysis", ""))
+            result, _ = workflow.step_visual_research(
+                req.brief, req.context.get("market_analysis", "")
+            )
         elif req.step == "design_generation":
             result, prompts = workflow.step_design_generation(
                 req.brief,
                 req.context.get("market_analysis", ""),
                 req.context.get("visual_research", ""),
                 image_count=req.settings.get("image_count", 4),
-                persona=req.settings.get("persona", "")
+                persona=req.settings.get("persona", ""),
             )
         elif req.step == "image_generation":
             workflow.step_image_generation(req.context.get("design_prompts", []))
             result = "Images generated"
 
         duration_ms = int((time.time() - start_time) * 1000)
-        task_result = {"status": "success", "result": result, "prompts": prompts, "duration_ms": duration_ms}
-        task_registry.complete(entry.task_id, result=task_result, duration_ms=duration_ms)
+        task_result = {
+            "status": "success",
+            "result": result,
+            "prompts": prompts,
+            "duration_ms": duration_ms,
+        }
+        task_registry.complete(
+            entry.task_id, result=task_result, duration_ms=duration_ms
+        )
 
         return task_result
     except Exception as e:
@@ -238,6 +298,8 @@ def run_step(req: StepRequest):
         task_registry.fail(entry.task_id, str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
+
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -202,38 +202,40 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
              // Clear any existing interval
              if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
              
-             pollIntervalRef.current = setInterval(() => {
-               fetch(`${API_URL}/api/project/${encodeURIComponent(project)}`)
-                 .then(res => res.json())
-                 .then(updatedData => {
-                   if (!isMounted) return
+              pollIntervalRef.current = setInterval(() => {
+                fetch(`${API_URL}/api/project/${encodeURIComponent(project)}`)
+                  .then(res => {
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+                    return res.json()
+                  })
+                  .then(updatedData => {
+                    if (!isMounted) return
 
-                   setStatus(updatedData.metadata.status)
-                   setCurrentStep(updatedData.metadata.current_step)
-                   
-                   // Auto-switch tab logic disabled as per user request
-                   // if (updatedData.metadata.current_step && STEPS.some(s => s.id === updatedData.metadata.current_step)) {
-                   //    setActiveTab(updatedData.metadata.current_step)
-                   // }
-                   
-                   setData(prev => ({
-                     ...prev,
-                     market_analysis: updatedData.market_analysis,
-                     visual_research: updatedData.visual_research,
-                     design_proposals: updatedData.design_proposals,
-                     full_report: updatedData.full_report,
-                     images: updatedData.images
-                   }))
-                   
-                   if (updatedData.metadata.status !== "in_progress" && updatedData.metadata.status !== "pending") {
-                     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
-                   }
-                 })
-                 .catch(err => {
-                   console.error("轮询失败:", err)
-                   if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
-                 })
-             }, 2000)
+                    setStatus(updatedData.metadata.status)
+                    setCurrentStep(updatedData.metadata.current_step)
+
+                    // Auto-switch tab logic disabled as per user request
+                    // if (updatedData.metadata.current_step && STEPS.some(s => s.id === updatedData.metadata.current_step)) {
+                    //    setActiveTab(updatedData.metadata.current_step)
+                    // }
+
+                    setData(prev => ({
+                      ...prev,
+                      market_analysis: updatedData.market_analysis,
+                      visual_research: updatedData.visual_research,
+                      design_proposals: updatedData.design_proposals,
+                      full_report: updatedData.full_report,
+                      images: updatedData.images
+                    }))
+
+                    if (updatedData.metadata.status !== "in_progress" && updatedData.metadata.status !== "pending") {
+                      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+                    }
+                  })
+                  .catch(err => {
+                    console.error("轮询失败:", err)
+                  })
+              }, 5000)
            }
         })
         .catch(err => console.error(err))

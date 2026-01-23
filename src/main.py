@@ -16,6 +16,7 @@ import config
 from core.config_manager import config_manager
 from config import logger
 from services.project_service import ProjectService
+from services import db_service
 
 
 class DesignWorkflowError(Exception):

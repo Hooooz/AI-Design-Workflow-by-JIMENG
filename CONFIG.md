@@ -19,6 +19,10 @@ JIMENG_SERVER_SCRIPT: "/Users/huangchuhao/Downloads/AI 工具/Cursor 代码库/H
 
 # 语言设置 (Chinese/English)
 LANGUAGE: "Chinese"
+
+# SUPABASE 密钥
+Database password:BQvrKNQNV3lnLNPu
+(You can use this password to connect directly to your Postgres database.)
 ```
 
 ## 2. Agent 提示词模板 (System Prompts)

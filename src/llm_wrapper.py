@@ -147,9 +147,7 @@ class LLMService:
         except Exception as e:
             print(f"Failed to write LLM log: {e}")
 
-    def chat_completion(
-        self, messages: List[Dict[str, str]], model: str = None
-    ) -> str:
+    def chat_completion(self, messages: List[Dict[str, str]], model: str = None) -> str:
         """
         调用 LLM 生成回复，支持自动模型降级 (Failover)。
         策略：优先尝试指定模型，失败后按优先级列表尝试其他模型。
@@ -179,7 +177,9 @@ class LLMService:
         for current_model in candidate_models:
             try:
                 # 内部函数：执行单个模型的调用（含参数重试逻辑）
-                def _call(extra_body: Dict[str, Any] | None, reasoning_effort: str | None):
+                def _call(
+                    extra_body: Dict[str, Any] | None, reasoning_effort: str | None
+                ):
                     kwargs = {
                         "model": current_model,
                         "messages": messages,
@@ -193,7 +193,9 @@ class LLMService:
                     return self.client.chat.completions.create(**kwargs)
 
                 # Gemini Thinking 参数配置
-                disable_gemini_thinking = os.getenv("DISABLE_GEMINI_THINKING", "1") != "0"
+                disable_gemini_thinking = (
+                    os.getenv("DISABLE_GEMINI_THINKING", "1") != "0"
+                )
                 reasoning_effort = None
                 extra_body = None
                 if (
@@ -211,23 +213,43 @@ class LLMService:
                 while retry_count <= max_retries:
                     try:
                         print(f"📡 Calling LLM ({current_model})...")
-                        response = _call(extra_body=extra_body, reasoning_effort=reasoning_effort)
-                        result = response.choices[0].message.content
+                        response = _call(
+                            extra_body=extra_body, reasoning_effort=reasoning_effort
+                        )
+
+                        raw_content = response.choices[0].message.content
+                        if not raw_content:
+                            raise ValueError(
+                                f"Model {current_model} returned empty response."
+                            )
+
+                        result = str(raw_content).strip()
+
+                        if len(result) < 5:
+                            raise ValueError(
+                                f"Model {current_model} returned too short response."
+                            )
 
                         duration = time.time() - start_time
                         self._log_call(current_model, messages, result, duration)
-                        print(f"✅ LLM Response received from {current_model} ({duration:.2f}s)")
+                        print(
+                            f"✅ LLM Response received from {current_model} ({duration:.2f}s)"
+                        )
                         return result
 
                     except Exception as e:
                         # 参数错误重试逻辑
-                        if (extra_body is not None or reasoning_effort is not None) and retry_count == 0:
+                        if (
+                            extra_body is not None or reasoning_effort is not None
+                        ) and retry_count == 0:
                             retry_count += 1
-                            print(f"⚠️ [{current_model}] 参数不兼容，移除 extra_body 重试...")
+                            print(
+                                f"⚠️ [{current_model}] 参数不兼容，移除 extra_body 重试..."
+                            )
                             reasoning_effort = None
                             extra_body = None
                             continue
-                        raise e # 抛出给外层处理（进行模型切换）
+                        raise e  # 抛出给外层处理（进行模型切换）
 
             except Exception as e:
                 last_error = e
@@ -235,12 +257,25 @@ class LLMService:
                 error_msg = str(e).lower()
 
                 # 判断是否值得切换模型
-                # 404 (Model Not Found), 429 (Rate Limit), 500 (Server Error) -> 切换
-                should_failover = any(code in error_msg for code in ["404", "429", "500", "not found", "rate limit", "overloaded"])
+                # 增加了 "empty/invalid response" 的检测
+                should_failover = any(
+                    code in error_msg
+                    for code in [
+                        "404",
+                        "429",
+                        "500",
+                        "not found",
+                        "rate limit",
+                        "overloaded",
+                        "empty/invalid",
+                    ]
+                )
 
                 if should_failover:
-                    print(f"⚠️ Model {current_model} failed: {str(e)[:100]}... -> Trying next model")
-                    continue # Try next model
+                    print(
+                        f"⚠️ Model {current_model} failed: {str(e)[:100]}... -> Trying next model"
+                    )
+                    continue  # Try next model
 
                 # 如果是其他严重错误（如认证失败），直接终止
                 print(f"❌ Unrecoverable error on {current_model}: {e}")
@@ -250,9 +285,7 @@ class LLMService:
         print("❌ All candidate models failed.")
         raise last_error
 
-    def chat_completion_stream(
-        self, messages: List[Dict[str, str]], model: str = None
-    ):
+    def chat_completion_stream(self, messages: List[Dict[str, str]], model: str = None):
         """
         调用 LLM 生成流式回复，支持自动模型降级 (Failover)。
         """
@@ -273,6 +306,7 @@ class LLMService:
 
         for current_model in candidate_models:
             try:
+
                 def _call_stream(extra_body, reasoning_effort):
                     kwargs = {
                         "model": current_model,
