@@ -10,7 +10,8 @@ from pydantic import BaseModel
 # Add current directory to path for imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from config import logger
+from fastapi.staticfiles import StaticFiles
+from config import logger, PROJECTS_ROOT
 from services.project_service import ProjectService
 from services import db_service
 from main import DesignWorkflow
@@ -19,8 +20,10 @@ from core.config_manager import config_manager
 from llm_wrapper import LLMService
 import config
 
-app = FastAPI(title="AI Design Workflow API (Cloud Only)")
+app = FastAPI(title="AI Design Workflow API (Local & Docker)")
 task_registry = TaskRegistry()
+
+app.mount("/projects", StaticFiles(directory="projects"), name="projects")
 
 app.add_middleware(
     CORSMiddleware,
@@ -55,7 +58,7 @@ class AutocompleteRequest(BaseModel):
 # --- Project Management ---
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "storage": "supabase_only", "timestamp": time.time()}
+    return {"status": "ok", "storage": "local", "timestamp": time.time()}
 
 
 @app.get("/api/projects")

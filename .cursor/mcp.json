@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "sbp_e8745e619ca8525497414f33d2191a86907caa25"
+      }
+    },
+    "railway": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@railway/mcp-server"
+      ],
+      "env": {
+        "RAILWAY_API_TOKEN": "733e1810-41f5-4b70-8d52-9816156fa8d0"
+      }
+    },
+    "vercel": {
+      "command": "node",
+      "args": [
+        "/Users/huangchuhao/Downloads/AI 工具/Cursor 代码库/Howie AI 工作室/node_modules/@vercel/sdk/bin/mcp-server.js",
+        "start",
+        "--bearer-token",
+        "nIXgjIYZBnsscXtRGqXulOdy"
+      ]
+    }
+  }
+}

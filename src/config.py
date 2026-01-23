@@ -41,8 +41,8 @@ OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "http://47.89.249.90:8000/openai/
 MODEL_PRIORITY_LIST = [
     "gemini-2.5-flash",  # 最新模型
     "gemini-1.5-flash",  # 稳定版
-    "gemini-2.0-flash-exp", # 实验版
-    "gpt-4o-mini",      # 备用
+    "gemini-2.0-flash-exp",  # 实验版
+    "gpt-4o-mini",  # 备用
 ]
 
 # 默认模型（取列表第一个）
@@ -50,6 +50,7 @@ DEFAULT_MODEL = MODEL_PRIORITY_LIST[0]
 
 # 输出目录
 OUTPUT_DIR = "output"
+PROJECTS_ROOT = "projects"
 
 # 即梦绘图服务脚本路径
 if ENV == "production":
@@ -64,16 +65,12 @@ else:
         "/Users/huangchuhao/Downloads/AI 工具/Cursor 代码库/Howie AI 工作室/彩友乐 AI 提效/AI设计工作流/test_workspace/image-gen-server/server.py",
     )
 
-# Supabase 数据库配置
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-if not SUPABASE_URL:
-    print("⚠️ 警告: SUPABASE_URL 未设置，数据库功能将不可用")
-
 # 安全配置
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
 MAX_CONCURRENT_IMAGES = int(os.getenv("MAX_CONCURRENT_IMAGES", "3"))
 API_RATE_LIMIT = os.getenv("API_RATE_LIMIT", "100/minute")
+
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 
 # 开发环境兜底配置（仅本地调试用）
 # 使用环境变量可以覆盖默认值

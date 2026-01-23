@@ -11,57 +11,22 @@ logger = logging.getLogger("design-workflow")
 class ProjectService:
     @staticmethod
     def fix_image_urls(images: List[str]) -> List[str]:
-        """
-        将路径转换为 Supabase 公网 URL。
-        业务逻辑：处理旧 IP、处理相对路径、识别 ID。
-        """
         if not images:
             return []
 
-        supabase_url = config.SUPABASE_URL
-        if not supabase_url:
-            return images
-
-        bucket = "project-images"
+        backend_url = os.getenv("BACKEND_URL", "http://localhost:8000").rstrip("/")
         fixed_images = []
 
         for img in images:
             if not img:
                 continue
 
-            # 处理旧的 IP 访问地址
-            if "47.89.249.90" in img and "/projects/" in img:
-                parts = img.split("/projects/")[-1].split("/")
-                if len(parts) >= 2:
-                    project_id = db_service.get_project_id(parts[0])
-                    filename = parts[1]
-                    fixed_images.append(
-                        f"{supabase_url}/storage/v1/object/public/{bucket}/{project_id}/{filename}"
-                    )
-                    continue
-
-            # 如果已经是正确的 Supabase 公网 URL，直接保留
-            if img.startswith("http") and "supabase.co" in img:
+            if img.startswith("http"):
                 fixed_images.append(img)
                 continue
 
-            # 处理本地/相对路径格式: /projects/{project_id}/{filename}
             if img.startswith("/projects/"):
-                parts = img.replace("/projects/", "").split("/")
-                if len(parts) >= 2:
-                    segment = parts[0]
-                    # 智能识别：如果是12位16进制字符串，认为是ID；否则认为是项目名
-                    if re.match(r"^[0-9a-f]{12}$", segment):
-                        project_id = segment
-                    else:
-                        project_id = db_service.get_project_id(segment)
-
-                    filename = parts[1]
-                    fixed_images.append(
-                        f"{supabase_url}/storage/v1/object/public/{bucket}/{project_id}/{filename}"
-                    )
-                else:
-                    fixed_images.append(img)
+                fixed_images.append(f"{backend_url}{img}")
             else:
                 fixed_images.append(img)
 

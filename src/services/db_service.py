@@ -1,114 +1,113 @@
+import os
+import json
 import time
 import hashlib
 from typing import List, Dict, Any, Optional
-from config import logger
-import config
+from config import logger, OUTPUT_DIR
 
-_supabase_client = None
-
-
-def get_supabase_client():
-    global _supabase_client
-    if _supabase_client is None:
-        if config.SUPABASE_URL and config.SUPABASE_KEY:
-            try:
-                from supabase import create_client
-
-                _supabase_client = create_client(
-                    config.SUPABASE_URL, config.SUPABASE_KEY
-                )
-            except Exception as e:
-                logger.error(f"Supabase 连接失败: {e}")
-                _supabase_client = False
-    return _supabase_client if _supabase_client else None
+PROJECTS_ROOT = os.path.join(os.getcwd(), "projects")
+os.makedirs(PROJECTS_ROOT, exist_ok=True)
 
 
 def get_project_id(project_name: str) -> str:
-    """统一的项目 ID 生成逻辑 (MD5 12位)"""
     return hashlib.md5(project_name.encode()).hexdigest()[:12]
 
 
+def _get_project_dir(project_name: str) -> str:
+    return os.path.join(PROJECTS_ROOT, project_name)
+
+
+def _get_project_info_path(project_name: str) -> str:
+    return os.path.join(_get_project_dir(project_name), "project_info.json")
+
+
 def db_get_projects(limit: int = 50):
-    client = get_supabase_client()
-    if not client:
-        return []
+    projects = []
     try:
-        result = (
-            client.table("projects")
-            .select(
-                "project_name, creation_time, status, current_step, tags, model_name, brief"
-            )
-            .order("creation_time", desc=True)
-            .limit(limit)
-            .execute()
-        )
-        return result.data
+        if not os.path.exists(PROJECTS_ROOT):
+            return []
+
+        for item in os.listdir(PROJECTS_ROOT):
+            path = os.path.join(PROJECTS_ROOT, item)
+            if os.path.isdir(path):
+                info_path = os.path.join(path, "project_info.json")
+                if os.path.exists(info_path):
+                    try:
+                        with open(info_path, "r", encoding="utf-8") as f:
+                            projects.append(json.load(f))
+                    except Exception as e:
+                        logger.error(f"Error reading {info_path}: {e}")
+
+        projects.sort(key=lambda x: x.get("creation_time", 0), reverse=True)
+        return projects[:limit]
     except Exception as e:
-        logger.error(f"数据库查询失败: {e}")
+        logger.error(f"Local DB query failed: {e}")
         return []
 
 
 def db_get_project(project_name: str):
-    client = get_supabase_client()
-    if not client:
-        return None
-    try:
-        result = (
-            client.table("projects")
-            .select("*")
-            .eq("project_name", project_name)
-            .execute()
-        )
-        return result.data[0] if result.data else None
-    except Exception as e:
-        logger.error(f"数据库查询失败: {e}")
-        return None
+    info_path = _get_project_info_path(project_name)
+    if os.path.exists(info_path):
+        try:
+            with open(info_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Error reading project {project_name}: {e}")
+    return None
 
 
 def db_create_project(
     project_name: str, brief: str, model_name: str, tags: List[str] = None
 ):
-    client = get_supabase_client()
-    if not client:
-        return None
+    project_dir = _get_project_dir(project_name)
+    os.makedirs(project_dir, exist_ok=True)
+
+    data = {
+        "project_name": project_name,
+        "brief": brief,
+        "model_name": model_name,
+        "creation_time": time.time(),
+        "status": "pending",
+        "current_step": "",
+        "tags": tags or [],
+        "content": {},
+        "images": [],
+    }
+
+    info_path = _get_project_info_path(project_name)
     try:
-        data = {
-            "project_name": project_name,
-            "brief": brief,
-            "model_name": model_name,
-            "creation_time": time.time(),
-            "status": "pending",
-            "current_step": "",
-            "tags": tags or [],
-            "content": {},
-        }
-        result = client.table("projects").insert(data).execute()
-        return result.data[0] if result.data else None
+        with open(info_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        return data
     except Exception as e:
-        logger.error(f"数据库插入失败: {e}")
+        logger.error(f"Local DB insert failed: {e}")
         return None
 
 
 def db_update_project(project_name: str, **kwargs):
-    client = get_supabase_client()
-    if not client:
+    project_dir = _get_project_dir(project_name)
+    if not os.path.exists(project_dir):
         return None
+
+    info_path = _get_project_info_path(project_name)
+    data = db_get_project(project_name) or {}
+    data.update(kwargs)
+
     try:
-        result = (
-            client.table("projects")
-            .update(kwargs)
-            .eq("project_name", project_name)
-            .execute()
-        )
-        return result.data[0] if result.data else None
+        with open(info_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+        return data
     except Exception as e:
-        logger.error(f"数据库更新失败: {e}")
+        logger.error(f"Local DB update failed: {e}")
         return None
 
 
 def save_project_content(project_name: str, new_content: Dict[str, Any]):
     proj = db_get_project(project_name)
-    existing_content = proj.get("content", {}) if proj else {}
+    if not proj:
+        return None
+
+    existing_content = proj.get("content", {})
     if not isinstance(existing_content, dict):
         existing_content = {}
 
@@ -117,5 +116,4 @@ def save_project_content(project_name: str, new_content: Dict[str, Any]):
 
 
 def save_project_images(project_name: str, images: List[str]):
-    """更新项目图片列表"""
     return db_update_project(project_name, images=images)
