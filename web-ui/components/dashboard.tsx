@@ -598,17 +598,14 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                 ),
                 h3: ({ node, ...props }) => <h3 {...props} className="text-zinc-800 dark:text-zinc-200 mt-8 mb-4 font-bold" />,
                 img: ({ node, ...props }) => {
+                    // ✅ FIXED: Use image URL directly from backend (already full Supabase URL)
                     const src = typeof props.src === 'string' ? props.src : '';
-                    const isRelative = src && !src.startsWith('http') && !src.startsWith('https') && !src.startsWith('/');
-                    // If src is relative path like "image.jpg", prepend project path
-                    // If API_URL is empty (proxy mode), the final path will be /projects/... which Next.js rewrites handle
-                    const finalSrc = isRelative ? `/projects/${project}/${src}` : src;
                     return (
                         <span className="block my-10 flex flex-col items-center gap-3">
-                            <img 
-                                {...props} 
-                                src={finalSrc} 
-                                className="max-w-full max-h-[500px] object-contain rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 transition-transform hover:scale-[1.01]" 
+                            <img
+                                {...props}
+                                src={src}
+                                className="max-w-full max-h-[500px] object-contain rounded-2xl shadow-2xl border border-zinc-200 dark:border-zinc-800 transition-transform hover:scale-[1.01]"
                             />
                             {props.alt && <span className="text-xs font-medium text-zinc-400 italic">图示：{props.alt}</span>}
                         </span>
@@ -668,8 +665,8 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                     {/* Left: Image */}
                                     <div className="relative h-[300px] md:h-auto bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
                                         {item.image_path ? (
-                                            <img 
-                                                src={item.image_path.startsWith('http') ? item.image_path : `${API_URL}${item.image_path}`} 
+                                            <img
+                                                src={item.image_path}
                                                 alt={item.scheme || item.concept || `Proposal ${i+1}`}
                                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                             />
@@ -815,8 +812,8 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                     {/* Image Display if available */}
                                     {item.image_path && (
                                         <div className="mb-3 aspect-square overflow-hidden rounded-md bg-white dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800">
-                                            <img 
-                                                src={item.image_path.startsWith('http') ? item.image_path : `${API_URL}${item.image_path}`} 
+                                            <img
+                                                src={item.image_path}
                                                 alt={item.concept || "Generated Image"}
                                                 className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                                             />
@@ -1383,19 +1380,15 @@ export function Dashboard({ project, onProjectCreated }: DashboardProps) {
                                     
                                     return galleryItems.length > 0 ? (
                                         galleryItems.map((item: ProposalItem & { src: string }, idx: number) => {
-                                            // Handle both local paths and Supabase Storage URLs
-                                            const imageSrc = item.src.startsWith('http') 
-                                                ? item.src 
-                                                : `${API_URL}${item.src}`;
-                                            const downloadSrc = item.src.startsWith('http')
-                                                ? item.src
-                                                : `${API_URL}${item.src}`;
-                                            
+                                            // ✅ FIXED: Use image URL directly (already full Supabase URL from backend)
+                                            const imageSrc = item.src;
+                                            const downloadSrc = item.src;
+
                                             return (
                                             <div key={idx} className="group relative bg-white dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col">
                                                 <div className="aspect-[4/5] overflow-hidden bg-zinc-100 dark:bg-zinc-800 relative">
-                                                    <img 
-                                                        src={imageSrc} 
+                                                    <img
+                                                        src={imageSrc}
                                                         alt={`Concept ${idx + 1}`}
                                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                                                     />
