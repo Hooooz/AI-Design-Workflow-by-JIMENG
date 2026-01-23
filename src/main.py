@@ -73,16 +73,20 @@ class DesignWorkflow:
         template = config_manager.get_prompt(agent_name, default_template)
         if "{knowledge}" in template and "knowledge" not in kwargs:
             kwargs["knowledge"] = self.knowledge_base
+
+        system_instruction = (
+            "\n\nCRITICAL INSTRUCTION:\n"
+            "1. You are a specialized design assistant API. You MUST output ONLY valid raw JSON.\n"
+            "2. DO NOT include any conversational text, explanations, or 'Sure, I can help with that' style messages.\n"
+            "3. DO NOT wrap the output in markdown code blocks like ```json.\n"
+            "4. Start your response with '{' and end with '}'.\n"
+            "5. Strictly follow the JSON schema defined in your task instructions."
+        )
+
         try:
-            return (
-                template.format(**kwargs)
-                + "\n\n⚠️ IMPORTANT: You must output ONLY valid JSON. No conversational text. No markdown blocks. No thinking process. Start with '{' and end with '}'."
-            )
+            return template.format(**kwargs) + system_instruction
         except KeyError:
-            return (
-                default_template.format(**kwargs)
-                + "\n\n⚠️ IMPORTANT: You must output ONLY valid JSON. No conversational text. No markdown blocks. No thinking process. Start with '{' and end with '}'."
-            )
+            return default_template.format(**kwargs) + system_instruction
 
     def _process_llm_json_response(
         self, raw_response: str
