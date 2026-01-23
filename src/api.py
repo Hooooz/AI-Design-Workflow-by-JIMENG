@@ -88,8 +88,16 @@ def get_project(project_name: str):
             if "prompts" in dp_data and isinstance(dp_data["prompts"], list):
                 for prompt in dp_data["prompts"]:
                     if "image_path" in prompt and prompt["image_path"]:
+                        raw_path = prompt["image_path"]
+
+                        # 特殊处理：如果是纯文件名（不含路径分隔符），手动补全路径结构
+                        if not raw_path.startswith("http") and "/" not in raw_path:
+                             project_id = db_service.get_project_id(project_name)
+                             # 构造标准路径供 fix_image_urls 处理
+                             raw_path = f"/projects/{project_id}/{raw_path}"
+
                         # 修复 image_path 为完整 Supabase URL
-                        fixed_urls = db_service.fix_image_urls([prompt["image_path"]])
+                        fixed_urls = db_service.fix_image_urls([raw_path])
                         prompt["image_path"] = fixed_urls[0] if fixed_urls else prompt["image_path"]
                 design_proposals = json.dumps(dp_data, ensure_ascii=False)
         except (json.JSONDecodeError, TypeError):

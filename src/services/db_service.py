@@ -59,8 +59,14 @@ def fix_image_urls(images: List[str]) -> List[str]:
         if img.startswith("/projects/"):
             parts = img.replace("/projects/", "").split("/")
             if len(parts) >= 2:
-                # 关键修复：parts[0] 已经是 project_id，不再进行哈希
-                project_id = parts[0]
+                segment = parts[0]
+                # 智能识别：如果是12位16进制字符串，认为是ID；否则认为是项目名
+                import re
+                if re.match(r'^[0-9a-f]{12}$', segment):
+                    project_id = segment
+                else:
+                    project_id = get_project_id(segment)
+
                 filename = parts[1]
                 fixed_images.append(f"{supabase_url}/storage/v1/object/public/{bucket}/{project_id}/{filename}")
             else:
