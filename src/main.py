@@ -59,21 +59,41 @@ class DesignWorkflow:
         if "{knowledge}" in template and "knowledge" not in kwargs:
             kwargs["knowledge"] = self.knowledge_base
         try:
-            return template.format(**kwargs)
+            return template.format(**kwargs) + "\n\n⚠️ IMPORTANT: You must output ONLY valid JSON. No conversational text. No markdown blocks. No thinking process. Start with '{' and end with '}'."
         except KeyError:
-            return default_template.format(**kwargs)
+            return default_template.format(**kwargs) + "\n\n⚠️ IMPORTANT: You must output ONLY valid JSON. No conversational text. No markdown blocks. No thinking process. Start with '{' and end with '}'."
 
     def _process_llm_json_response(self, raw_response: str) -> Tuple[str, List[Dict], Dict]:
-        try:
-            json_str = raw_response
-            match = re.search(r"```json\s*(.*?)```", raw_response, re.DOTALL)
-            if match: json_str = match.group(1)
-            else:
-                match = re.search(r"\{.*\}", raw_response, re.DOTALL)
-                if match: json_str = match.group(0)
+        # Debug logging
+        logger.info(f"LLM Response parsing. Length: {len(raw_response)}")
 
-            json_str = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", json_str)
-            data = json.loads(json_str)
+        try:
+            json_str = raw_response.strip()
+
+            # 1. 尝试提取 Markdown 代码块 (支持 ```json 和 纯 ```)
+            match = re.search(r"```(?:json)?\s*(.*?)```", raw_response, re.DOTALL | re.IGNORECASE)
+            if match:
+                json_str = match.group(1).strip()
+            else:
+                # 2. 尝试提取最外层的大括号内容
+                # 寻找第一个 { 和最后一个 }
+                start = raw_response.find('{')
+                end = raw_response.rfind('}')
+                if start != -1 and end != -1 and end > start:
+                    json_str = raw_response[start:end+1]
+
+            # 3. 清理控制字符 (保留换行和制表符，避免破坏内容)
+            # 移除 ASCII 0-8, 11-12, 14-31, 127
+            json_str = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", json_str)
+
+            try:
+                data = json.loads(json_str)
+            except json.JSONDecodeError as e:
+                logger.error(f"JSON Parse Error: {e}")
+                logger.error(f"Problematic JSON (first 500 chars): {json_str[:500]}...")
+                # 如果解析失败，尝试最后一种手段：如果原来的 raw_response 就是纯文本，可能根本不是 JSON
+                # 这里我们抛出异常，让外层捕获
+                raise e
 
             summary = data.get("summary", "")
             content = data.get("content", "")
