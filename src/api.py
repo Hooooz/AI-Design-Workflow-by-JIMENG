@@ -107,12 +107,54 @@ def get_project(project_name: str):
     metadata_fields = ["project_name", "brief", "model_name", "creation_time", "status", "current_step", "tags"]
     metadata = {k: project.get(k) for k in metadata_fields if k in project}
 
+    # 辅助函数：修复 Markdown 文本中的图片链接
+    import re
+    def fix_markdown_images(text):
+        if not text: return ""
+        # 匹配 Markdown 图片语法: ![alt](filename) 或 [alt](filename)
+        # 捕获组 1: alt text, 捕获组 2: filename (仅匹配 jimeng_ 开头且不含 / 的文件名)
+        pattern = r'(!?\[.*?\])\((jimeng_[^)]+\.(?:jpg|png|jpeg))\)'
+
+        def replace_url(match):
+            prefix = match.group(1)
+            filename = match.group(2)
+            # 构造完整 Supabase URL
+            project_id = db_service.get_project_id(project_name)
+            # 使用 fix_image_urls 获取最终 URL
+            temp_path = f"/projects/{project_id}/{filename}"
+            fixed_urls = db_service.fix_image_urls([temp_path])
+            final_url = fixed_urls[0] if fixed_urls else filename
+            return f"{prefix}({final_url})"
+
+        return re.sub(pattern, replace_url, text)
+
+    # 修复所有文本字段中的 Markdown 图片链接
+    market_analysis = fix_markdown_images(project.get("market_analysis", ""))
+    visual_research = fix_markdown_images(project.get("visual_research", ""))
+    full_report = fix_markdown_images(project.get("full_report", ""))
+
+    # 对 design_proposals 做特殊处理（它可能是 JSON 字符串，但也可能包含 Markdown）
+    # 如果它已经是修复过的 JSON 字符串，再次进行正则替换可能会破坏结构，所以小心处理
+    # 但由于之前的修复只处理了 prompts 里的 image_path，这里我们还需要处理 content 里的 markdown
+    if design_proposals and isinstance(design_proposals, str):
+        # 如果是 JSON，先尝试只修复其中的 content 字段（如果有）
+        try:
+             dp_json = json.loads(design_proposals)
+             if "content" in dp_json and isinstance(dp_json["content"], str):
+                 dp_json["content"] = fix_markdown_images(dp_json["content"])
+                 design_proposals = json.dumps(dp_json, ensure_ascii=False)
+             else:
+                 # 如果不是标准结构，或者解析失败，尝试直接替换（风险较低，因为 jimeng_xxx 很独特）
+                 design_proposals = fix_markdown_images(design_proposals)
+        except:
+             design_proposals = fix_markdown_images(design_proposals)
+
     response = {
         "metadata": metadata,
-        "market_analysis": project.get("market_analysis", ""),
-        "visual_research": project.get("visual_research", ""),
+        "market_analysis": market_analysis,
+        "visual_research": visual_research,
         "design_proposals": design_proposals,
-        "full_report": project.get("full_report", ""),
+        "full_report": full_report,
         "images": project.get("images", [])
     }
 
