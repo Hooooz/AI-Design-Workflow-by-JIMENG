@@ -191,16 +191,8 @@ class RunAllRequest(BaseModel):
     image_count: int = 4
     persona: str = ""
 
-@app.post("/api/workflow/run_all")
-def run_all_workflow(req: RunAllRequest):
-    """一键执行完整设计工作流：市场分析 → 视觉研究 → 方案生成 → 图片生成"""
-    dedup_key = compute_dedup_key("run_all", req.dict())
-    entry, created = task_registry.get_or_create("run_all", dedup_key)
-
-    if not created:
-        waited = task_registry.wait(entry.task_id, timeout_s=900)
-        return waited.result if waited else {"status": "timeout"}
-
+def _run_all_background(task_id: str, req: RunAllRequest):
+    """后台执行完整工作流"""
     try:
         start_time = time.time()
         workflow = DesignWorkflow(project_name=req.project_name)
@@ -234,13 +226,46 @@ def run_all_workflow(req: RunAllRequest):
             "duration_ms": duration_ms,
             "steps_completed": ["market_analysis", "visual_research", "design_generation", "image_generation"]
         }
-        task_registry.complete(entry.task_id, result=task_result, duration_ms=duration_ms)
-        return task_result
+        task_registry.complete(task_id, result=task_result, duration_ms=duration_ms)
+        print(f"✅ 后台任务完成: {req.project_name}")
 
     except Exception as e:
+        print(f"❌ 后台任务失败: {e}")
         db_service.db_update_project(req.project_name, status="failed")
-        task_registry.fail(entry.task_id, str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        task_registry.fail(task_id, str(e))
+
+@app.post("/api/workflow/run_all")
+def run_all_workflow(req: RunAllRequest, background_tasks: BackgroundTasks):
+    """一键执行完整设计工作流（异步后台模式）"""
+    # 1. 确保项目已创建
+    existing = db_service.db_get_project(req.project_name)
+    if not existing:
+        db_service.db_create_project(
+            project_name=req.project_name,
+            brief=req.brief,
+            model_name=req.model_name
+        )
+
+    # 2. 注册任务
+    dedup_key = compute_dedup_key("run_all", req.dict())
+    entry, created = task_registry.get_or_create("run_all", dedup_key)
+
+    if not created:
+        return {"status": "in_progress", "message": "Task already running", "task_id": entry.task_id}
+
+    # 3. 立即更新状态为进行中
+    db_service.db_update_project(req.project_name, status="in_progress", current_step="starting")
+
+    # 4. 添加后台任务
+    background_tasks.add_task(_run_all_background, entry.task_id, req)
+
+    # 5. 立即返回
+    return {
+        "status": "pending",
+        "message": "Workflow started in background",
+        "project_name": req.project_name,
+        "task_id": entry.task_id
+    }
 
 @app.post("/api/workflow/step")
 def run_step(req: StepRequest):
