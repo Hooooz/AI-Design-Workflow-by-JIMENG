@@ -32,7 +32,7 @@ app.add_middleware(
 class ProjectCreate(BaseModel):
     project_name: str
     brief: str
-    model_name: str = "gemini-2.5-flash"
+    model_name: str = "gemini-2.0-flash-exp"
 
 class StepRequest(BaseModel):
     project_name: str
@@ -44,7 +44,7 @@ class StepRequest(BaseModel):
 
 class AutocompleteRequest(BaseModel):
     brief: str
-    model_name: str = "gemini-2.5-flash"
+    model_name: str = "gemini-2.0-flash-exp"
 
 # --- Project Management ---
 @app.get("/api/health")
@@ -187,7 +187,7 @@ def ai_tags(req: AutocompleteRequest):
 class RunAllRequest(BaseModel):
     project_name: str
     brief: str
-    model_name: str = "gemini-2.5-flash"
+    model_name: str = "gemini-2.0-flash-exp"
     image_count: int = 4
     persona: str = ""
 

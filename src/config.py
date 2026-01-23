@@ -24,7 +24,7 @@ if not OPENAI_API_KEY:
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "http://47.89.249.90:8000/openai/v1")
 
 # 模型配置
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-2.0-flash-exp"
 
 # 输出目录
 OUTPUT_DIR = "output"
