@@ -39,7 +39,10 @@ OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "http://47.89.249.90:8000/openai/
 # 优先级列表：自动降级策略 (Failover Strategy)
 # 回退到稳健策略 (2025-02-12)
 MODEL_PRIORITY_LIST = [
-    "gemini-2.5-flash",  # 用户指定测试模型
+    "gemini-2.5-flash",  # 最新模型
+    "gemini-1.5-flash",  # 稳定版
+    "gemini-2.0-flash-exp", # 实验版
+    "gpt-4o-mini",      # 备用
 ]
 
 # 默认模型（取列表第一个）
