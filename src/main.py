@@ -14,6 +14,7 @@ from llm_wrapper import LLMService
 from image_gen import ImageGenService
 import config
 from core.config_manager import config_manager
+from core.response_processor import LLMResponseProcessor
 from config import logger
 from services.project_service import ProjectService
 from services import db_service
@@ -89,92 +90,46 @@ class DesignWorkflow:
             return default_template.format(**kwargs) + system_instruction
 
     def _process_llm_json_response(
-        self, raw_response: str
+        self, raw_response: str, processor_func
     ) -> Tuple[str, List[Dict], Dict]:
-        # Debug logging
-        logger.info(f"LLM Response parsing. Length: {len(raw_response)}")
+        """
+        Generic handler that uses the specific processor function.
+        Returns: (markdown_content, prompts_list, full_data_dict)
+        """
+        logger.info(f"LLM Response processing. Length: {len(raw_response)}")
 
         try:
-            json_str = raw_response.strip()
+            # 1. Process data using the specific processor (e.g., process_market_analysis)
+            data = processor_func(raw_response)
 
-            # 1. 尝试提取 Markdown 代码块 (支持 ```json 和 纯 ```)
-            match = re.search(
-                r"```(?:json)?\s*(.*?)```", raw_response, re.DOTALL | re.IGNORECASE
-            )
-            if match:
-                json_str = match.group(1).strip()
-            else:
-                # 2. 尝试提取最外层的大括号内容
-                # 寻找第一个 { 和最后一个 }
-                start = raw_response.find("{")
-                end = raw_response.rfind("}")
-                if start != -1 and end != -1 and end > start:
-                    json_str = raw_response[start : end + 1]
+            # 2. Extract standard fields
+            summary = data.get("summary", "")
+            # Support 'content' or fallback to empty if it's purely a list-based response
+            content = data.get("content", "")
 
-            json_str = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", json_str)
+            # 3. Extract prompts/visuals (handled polymorphically)
+            prompts = data.get("prompts") or data.get("visuals") or []
 
-            try:
-                json_bytes = json_str.encode("utf-8", errors="replace")
-                json_str = json_bytes.decode("utf-8", errors="replace")
-            except Exception as e:
-                logger.warning(f"UTF-8 encoding issue: {e}")
-
-            try:
-                data = json.loads(json_str)
-            except json.JSONDecodeError as e:
-                logger.error(f"JSON Parse Error: {e}")
-                logger.error(f"Problematic JSON (first 500 chars): {json_str[:500]}...")
-                logger.error(f"Raw response (first 200 chars): {raw_response[:200]}...")
-                raise e
-
-            summary = (
-                data.get("summary")
-                or data.get("摘要")
-                or data.get("核心摘要")
-                or data.get("summary_text")
-                or ""
-            )
-            content = (
-                data.get("content")
-                or data.get("内容")
-                or data.get("报告")
-                or data.get("report")
-                or ""
-            )
-
-            prompts = (
-                data.get("prompts")
-                or data.get("visuals")
-                or data.get("方案")
-                or data.get("设计方案")
-                or data.get("方案列表")
-                or []
-            )
-
-            if isinstance(prompts, dict):
-                for key in ["list", "items", "data", "方案", "details"]:
-                    if key in prompts and isinstance(prompts[key], list):
-                        prompts = prompts[key]
-                        break
-                else:
-                    prompts = []
-
+            # 4. Construct Markdown Content
             final_content = ""
             if summary:
                 final_content += f"> 💡 **核心摘要**: {summary}\n\n"
 
-            if prompts and isinstance(prompts, list) and self.project_name:
+            # 5. Generate Images if prompts exist
+            if prompts and self.project_name:
                 self.log(f"    - 生成 {len(prompts)} 个可视化插图...")
                 for item in prompts:
                     if not isinstance(item, dict):
                         continue
 
+                    # Robust prompt extraction
                     p_text = (
                         item.get("prompt")
                         or item.get("提示词")
                         or item.get("drawing_prompt")
                         or ""
                     )
+
                     if p_text:
                         img_url = self.image_gen.generate_image(
                             p_text, self.temp_dir, project_name=self.project_name
@@ -185,18 +140,21 @@ class DesignWorkflow:
                             self.generated_images.append(img_url)
 
             final_content += content
+
             return final_content, prompts, data
+
         except Exception as e:
+            logger.error(f"Processing failed: {e}")
+            logger.error(f"Raw response: {raw_response[:500]}...")
             raise DesignWorkflowError(f"处理响应失败: {e}")
 
     def step_market_analysis(self, brief, stream=False):
         prompt = self._get_prompt("market_analyst", "请进行市场分析", brief=brief)
         messages = [{"role": "user", "content": prompt}]
-        if stream:
-            return self.llm.chat_completion_stream(messages)
         response = self.llm.chat_completion(messages)
-        md, prompts, data = self._process_llm_json_response(response)
-        return md, prompts
+        return self._process_llm_json_response(
+            response, LLMResponseProcessor.process_market_analysis
+        )
 
     def step_visual_research(self, brief, market_analysis, stream=False):
         prompt = self._get_prompt(
@@ -206,11 +164,10 @@ class DesignWorkflow:
             market_analysis=market_analysis,
         )
         messages = [{"role": "user", "content": prompt}]
-        if stream:
-            return self.llm.chat_completion_stream(messages)
         response = self.llm.chat_completion(messages)
-        md, prompts, data = self._process_llm_json_response(response)
-        return md, prompts
+        return self._process_llm_json_response(
+            response, LLMResponseProcessor.process_visual_research
+        )
 
     def step_design_generation(
         self,
@@ -231,10 +188,14 @@ class DesignWorkflow:
         )
         full_prompt = base_prompt + (f"\n视角：{persona}\n" if persona else "")
         messages = [{"role": "user", "content": full_prompt}]
-        if stream:
-            return self.llm.chat_completion_stream(messages)
         response = self.llm.chat_completion(messages)
-        md, prompts, data = self._process_llm_json_response(response)
+
+        # Returns: (markdown_str, prompts_list, full_data_dict)
+        md, prompts, data = self._process_llm_json_response(
+            response, LLMResponseProcessor.process_design_generation
+        )
+
+        # Design step specifically needs to return the JSON structure + prompts list
         return json.dumps(data, ensure_ascii=False), prompts
 
     def step_image_generation(

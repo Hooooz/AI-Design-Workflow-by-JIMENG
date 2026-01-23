@@ -179,12 +179,7 @@ def _run_all_background(task_id: str, req: RunAllRequest):
 
         try:
             design_data = json.loads(design_json_str)
-            for key in ["prompts", "visuals", "方案", "设计方案", "方案列表"]:
-                if key in design_data and isinstance(design_data[key], list):
-                    design_data[key] = prompts
-                    break
-            else:
-                design_data["prompts"] = prompts
+            design_data["prompts"] = prompts
 
             updated_design_result = json.dumps(design_data, ensure_ascii=False)
             db_service.save_project_content(
