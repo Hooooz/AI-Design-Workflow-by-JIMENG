@@ -24,7 +24,16 @@ if not OPENAI_API_KEY:
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "http://47.89.249.90:8000/openai/v1")
 
 # 模型配置
-DEFAULT_MODEL = "gemini-2.0-flash-exp"
+# 优先级列表：自动降级策略 (Failover Strategy)
+# 用户指定顺序 (2025-02-12)
+MODEL_PRIORITY_LIST = [
+    "gemini-3.0-flash",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+]
+
+# 默认模型（取列表第一个）
+DEFAULT_MODEL = MODEL_PRIORITY_LIST[0]
 
 # 输出目录
 OUTPUT_DIR = "output"

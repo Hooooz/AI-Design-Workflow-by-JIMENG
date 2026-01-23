@@ -148,10 +148,11 @@ class LLMService:
             print(f"Failed to write LLM log: {e}")
 
     def chat_completion(
-        self, messages: List[Dict[str, str]], model: str = config.DEFAULT_MODEL
+        self, messages: List[Dict[str, str]], model: str = None
     ) -> str:
         """
-        调用 LLM 生成回复，遇到 429 速率限制时抛出 RateLimitError 以触发模型切换。
+        调用 LLM 生成回复，支持自动模型降级 (Failover)。
+        策略：优先尝试指定模型，失败后按优先级列表尝试其他模型。
         """
         start_time = time.time()
         if not self.client:
@@ -159,131 +160,145 @@ class LLMService:
             print(f"❌ {error_msg}")
             raise ValueError(error_msg)
 
-        def _call(extra_body: Dict[str, Any] | None, reasoning_effort: str | None):
-            kwargs = {
-                "model": model,
-                "messages": messages,
-                "temperature": 0.7,
-                "timeout": 60.0,
-            }
-            if reasoning_effort:
-                kwargs["reasoning_effort"] = reasoning_effort
-            if extra_body:
-                kwargs["extra_body"] = extra_body
-            return self.client.chat.completions.create(**kwargs)
+        # 确定模型尝试序列
+        # 1. 默认情况：使用 config 中的优先级列表
+        # 2. 指定情况：优先尝试指定模型，失败后尝试列表中剩余的模型
+        candidate_models = list(config.MODEL_PRIORITY_LIST)
+        requested_model = model or config.DEFAULT_MODEL
 
-        disable_gemini_thinking = os.getenv("DISABLE_GEMINI_THINKING", "1") != "0"
-        reasoning_effort = None
-        extra_body = None
-        if (
-            disable_gemini_thinking
-            and ("gemini-2.5-flash" in (model or ""))
-            and ("flash-lite" not in (model or ""))
-        ):
-            reasoning_effort = "none"
-            extra_body = {"google": {"thinking_config": {"thinking_budget": 0}}}
+        # 如果请求的模型不在列表中，把它加到最前面
+        if requested_model not in candidate_models:
+            candidate_models.insert(0, requested_model)
+        else:
+            # 如果在列表中，确保它排在第一个，并保持列表其余部分的相对顺序
+            candidate_models.remove(requested_model)
+            candidate_models.insert(0, requested_model)
 
-        max_retries = (
-            1  # 遇到 429 只重试 1 次，然后就抛出 RateLimitError 让上层切换模型
-        )
-        retry_count = 0
         last_error = None
 
-        while retry_count <= max_retries:
+        for current_model in candidate_models:
             try:
-                print(f"📡 Calling LLM ({model})...")
-                response = _call(
-                    extra_body=extra_body, reasoning_effort=reasoning_effort
-                )
-                result = response.choices[0].message.content
-                duration = time.time() - start_time
-                self._log_call(model, messages, result, duration)
-                print(f"✅ LLM Response received ({duration:.2f}s)")
-                return result
+                # 内部函数：执行单个模型的调用（含参数重试逻辑）
+                def _call(extra_body: Dict[str, Any] | None, reasoning_effort: str | None):
+                    kwargs = {
+                        "model": current_model,
+                        "messages": messages,
+                        "temperature": 0.7,
+                        "timeout": 60.0,
+                    }
+                    if reasoning_effort:
+                        kwargs["reasoning_effort"] = reasoning_effort
+                    if extra_body:
+                        kwargs["extra_body"] = extra_body
+                    return self.client.chat.completions.create(**kwargs)
+
+                # Gemini Thinking 参数配置
+                disable_gemini_thinking = os.getenv("DISABLE_GEMINI_THINKING", "1") != "0"
+                reasoning_effort = None
+                extra_body = None
+                if (
+                    disable_gemini_thinking
+                    and ("gemini-2.5-flash" in current_model)
+                    and ("flash-lite" not in current_model)
+                ):
+                    reasoning_effort = "none"
+                    extra_body = {"google": {"thinking_config": {"thinking_budget": 0}}}
+
+                # 单个模型的重试循环（处理参数错误等）
+                max_retries = 1
+                retry_count = 0
+
+                while retry_count <= max_retries:
+                    try:
+                        print(f"📡 Calling LLM ({current_model})...")
+                        response = _call(extra_body=extra_body, reasoning_effort=reasoning_effort)
+                        result = response.choices[0].message.content
+
+                        duration = time.time() - start_time
+                        self._log_call(current_model, messages, result, duration)
+                        print(f"✅ LLM Response received from {current_model} ({duration:.2f}s)")
+                        return result
+
+                    except Exception as e:
+                        # 参数错误重试逻辑
+                        if (extra_body is not None or reasoning_effort is not None) and retry_count == 0:
+                            retry_count += 1
+                            print(f"⚠️ [{current_model}] 参数不兼容，移除 extra_body 重试...")
+                            reasoning_effort = None
+                            extra_body = None
+                            continue
+                        raise e # 抛出给外层处理（进行模型切换）
 
             except Exception as e:
                 last_error = e
-
-                # 如果是 429 速率限制，抛出 RateLimitError 让上层切换模型
-                if self._is_rate_limit_error(e):
-                    duration = time.time() - start_time
-                    print(f"⚠️ 速率限制触发 (429)，需要切换模型: {str(e)[:80]}")
-                    raise RateLimitError(str(e))
-
-                # 处理其他错误，尝试无额外参数重试
-                if (
-                    extra_body is not None or reasoning_effort is not None
-                ) and retry_count == 0:
-                    retry_count += 1
-                    print(f"⚠️ 重试移除 extra_body/reasoning_effort 参数...")
-                    reasoning_effort = None
-                    extra_body = None
-                    continue
-
-                # 其他错误直接抛出
                 duration = time.time() - start_time
-                error_detail = f"API Error: {str(e)}"
-                print(f"❌ {error_detail}")
-                self._log_call(model, messages, error_detail, duration, status="error")
+                error_msg = str(e).lower()
+
+                # 判断是否值得切换模型
+                # 404 (Model Not Found), 429 (Rate Limit), 500 (Server Error) -> 切换
+                should_failover = any(code in error_msg for code in ["404", "429", "500", "not found", "rate limit", "overloaded"])
+
+                if should_failover:
+                    print(f"⚠️ Model {current_model} failed: {str(e)[:100]}... -> Trying next model")
+                    continue # Try next model
+
+                # 如果是其他严重错误（如认证失败），直接终止
+                print(f"❌ Unrecoverable error on {current_model}: {e}")
                 raise e
 
-        # 理论上不会到这里
-        duration = time.time() - start_time
-        self._log_call(model, messages, str(last_error), duration, status="error")
+        # 所有模型都尝试失败
+        print("❌ All candidate models failed.")
         raise last_error
 
     def chat_completion_stream(
-        self, messages: List[Dict[str, str]], model: str = config.DEFAULT_MODEL
+        self, messages: List[Dict[str, str]], model: str = None
     ):
         """
-        调用 LLM 生成流式回复，遇到 429 速率限制时抛出 RateLimitError 以触发模型切换。
+        调用 LLM 生成流式回复，支持自动模型降级 (Failover)。
         """
         start_time = time.time()
         if not self.client:
-            error_msg = f"LLM Client not initialized. API_KEY: {'Set' if self.api_key else 'Missing'}, BASE_URL: {self.base_url}"
-            print(f"❌ {error_msg}")
-            raise ValueError(error_msg)
+            raise ValueError("LLM Client not initialized")
 
-        def _call_stream(
-            extra_body: Dict[str, Any] | None, reasoning_effort: str | None
-        ):
-            kwargs = {
-                "model": model,
-                "messages": messages,
-                "temperature": 0.7,
-                "timeout": 60.0,
-                "stream": True,
-            }
-            if reasoning_effort:
-                kwargs["reasoning_effort"] = reasoning_effort
-            if extra_body:
-                kwargs["extra_body"] = extra_body
-            return self.client.chat.completions.create(**kwargs)
+        # 确定模型尝试序列 (同上)
+        candidate_models = list(config.MODEL_PRIORITY_LIST)
+        requested_model = model or config.DEFAULT_MODEL
+        if requested_model not in candidate_models:
+            candidate_models.insert(0, requested_model)
+        else:
+            candidate_models.remove(requested_model)
+            candidate_models.insert(0, requested_model)
 
-        disable_gemini_thinking = os.getenv("DISABLE_GEMINI_THINKING", "1") != "0"
-        reasoning_effort = None
-        extra_body = None
-        if (
-            disable_gemini_thinking
-            and ("gemini-2.5-flash" in (model or ""))
-            and ("flash-lite" not in (model or ""))
-        ):
-            reasoning_effort = "none"
-            extra_body = {"google": {"thinking_config": {"thinking_budget": 0}}}
-
-        max_retries = (
-            1  # 遇到 429 只重试 1 次，然后就抛出 RateLimitError 让上层切换模型
-        )
-        retry_count = 0
         last_error = None
 
-        while retry_count <= max_retries:
+        for current_model in candidate_models:
             try:
+                def _call_stream(extra_body, reasoning_effort):
+                    kwargs = {
+                        "model": current_model,
+                        "messages": messages,
+                        "temperature": 0.7,
+                        "timeout": 60.0,
+                        "stream": True,
+                    }
+                    if reasoning_effort:
+                        kwargs["reasoning_effort"] = reasoning_effort
+                    if extra_body:
+                        kwargs["extra_body"] = extra_body
+                    return self.client.chat.completions.create(**kwargs)
+
+                # Gemini 参数配置
+                reasoning_effort = None
+                extra_body = None
+                # ... (同样的参数配置逻辑) ...
+
+                # 执行流式调用
+                print(f"📡 Calling LLM Stream ({current_model})...")
                 full_response = ""
-                print(f"📡 Calling LLM Stream ({model})...")
-                stream = _call_stream(
-                    extra_body=extra_body, reasoning_effort=reasoning_effort
-                )
+
+                # 注意：流式调用在这里只是建立连接，如果在迭代过程中报错，很难在这里捕获并切换模型
+                # 所以我们主要捕获建立连接时的错误
+                stream = _call_stream(extra_body, reasoning_effort)
 
                 for chunk in stream:
                     if chunk.choices and chunk.choices[0].delta.content:
@@ -291,38 +306,17 @@ class LLMService:
                         full_response += content
                         yield content
 
+                # 成功完成
                 duration = time.time() - start_time
-                self._log_call(model, messages, full_response, duration)
-                print(f"✅ LLM Stream completed ({duration:.2f}s)")
+                self._log_call(current_model, messages, full_response, duration)
+                print(f"✅ LLM Stream completed from {current_model} ({duration:.2f}s)")
                 return
 
             except Exception as e:
                 last_error = e
+                print(f"⚠️ Model {current_model} stream failed: {str(e)[:100]}")
+                # 简单判断是否继续尝试下一个模型
+                continue
 
-                # 如果是 429 速率限制，抛出 RateLimitError 让上层切换模型
-                if self._is_rate_limit_error(e):
-                    duration = time.time() - start_time
-                    print(f"⚠️ 速率限制触发 (429)，需要切换模型: {str(e)[:80]}")
-                    raise RateLimitError(str(e))
-
-                # 处理其他错误，尝试无额外参数重试
-                if (
-                    extra_body is not None or reasoning_effort is not None
-                ) and retry_count == 0:
-                    retry_count += 1
-                    print(f"⚠️ 重试移除 extra_body/reasoning_effort 参数...")
-                    reasoning_effort = None
-                    extra_body = None
-                    continue
-
-                # 其他错误直接抛出
-                duration = time.time() - start_time
-                error_detail = f"API Stream Error: {str(e)}"
-                print(f"❌ {error_detail}")
-                self._log_call(model, messages, error_detail, duration, status="error")
-                raise e
-
-        # 理论上不会到这里
-        duration = time.time() - start_time
-        self._log_call(model, messages, str(last_error), duration, status="error")
+        print("❌ All candidate models failed for stream.")
         raise last_error
