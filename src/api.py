@@ -177,6 +177,11 @@ def _run_all_background(task_id: str, req: RunAllRequest):
         db_service.db_update_project(req.project_name, current_step="image_generation")
         workflow.step_image_generation(prompts)
 
+        updated_design_result = json.dumps({"prompts": prompts}, ensure_ascii=False)
+        db_service.save_project_content(
+            req.project_name, {"design_proposals": updated_design_result}
+        )
+
         # Mark as completed
         db_service.db_update_project(
             req.project_name, status="completed", current_step=""
