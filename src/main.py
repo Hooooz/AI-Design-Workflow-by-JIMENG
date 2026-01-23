@@ -125,26 +125,59 @@ class DesignWorkflow:
                 logger.error(f"JSON Parse Error: {e}")
                 logger.error(f"Problematic JSON (first 500 chars): {json_str[:500]}...")
                 logger.error(f"Raw response (first 200 chars): {raw_response[:200]}...")
-                # 如果解析失败，尝试最后一种手段：如果原来的 raw_response 就是纯文本，可能根本不是 JSON
-                # 这里我们抛出异常，让外层捕获
                 raise e
 
-            summary = data.get("summary", "")
-            content = data.get("content", "")
-            visuals = data.get("visuals", [])
-            prompts = data.get("prompts", [])
+            summary = (
+                data.get("summary")
+                or data.get("摘要")
+                or data.get("核心摘要")
+                or data.get("summary_text")
+                or ""
+            )
+            content = (
+                data.get("content")
+                or data.get("内容")
+                or data.get("报告")
+                or data.get("report")
+                or ""
+            )
+
+            prompts = (
+                data.get("prompts")
+                or data.get("visuals")
+                or data.get("方案")
+                or data.get("设计方案")
+                or data.get("方案列表")
+                or []
+            )
+
+            if isinstance(prompts, dict):
+                for key in ["list", "items", "data", "方案", "details"]:
+                    if key in prompts and isinstance(prompts[key], list):
+                        prompts = prompts[key]
+                        break
+                else:
+                    prompts = []
 
             final_content = ""
             if summary:
                 final_content += f"> 💡 **核心摘要**: {summary}\n\n"
 
-            if visuals and self.project_name:
-                self.log(f"    - 生成 {len(visuals)} 个可视化插图...")
-                for item in visuals:
-                    prompt = item.get("prompt", "")
-                    if prompt:
+            if prompts and isinstance(prompts, list) and self.project_name:
+                self.log(f"    - 生成 {len(prompts)} 个可视化插图...")
+                for item in prompts:
+                    if not isinstance(item, dict):
+                        continue
+
+                    p_text = (
+                        item.get("prompt")
+                        or item.get("提示词")
+                        or item.get("drawing_prompt")
+                        or ""
+                    )
+                    if p_text:
                         img_url = self.image_gen.generate_image(
-                            prompt, self.temp_dir, project_name=self.project_name
+                            p_text, self.temp_dir, project_name=self.project_name
                         )
                         if img_url:
                             final_content += f"\n![Concept]({img_url})\n"
@@ -152,7 +185,7 @@ class DesignWorkflow:
                             self.generated_images.append(img_url)
 
             final_content += content
-            return final_content, prompts if prompts else visuals, data
+            return final_content, prompts, data
         except Exception as e:
             raise DesignWorkflowError(f"处理响应失败: {e}")
 

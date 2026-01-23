@@ -162,7 +162,7 @@ def _run_all_background(task_id: str, req: RunAllRequest):
 
         # Step 3: Design Generation
         db_service.db_update_project(req.project_name, current_step="design_generation")
-        design_result, prompts = workflow.step_design_generation(
+        design_json_str, prompts = workflow.step_design_generation(
             req.brief,
             market_result,
             visual_result,
@@ -170,17 +170,32 @@ def _run_all_background(task_id: str, req: RunAllRequest):
             persona=req.persona,
         )
         db_service.save_project_content(
-            req.project_name, {"design_proposals": design_result}
+            req.project_name, {"design_proposals": design_json_str}
         )
 
         # Step 4: Image Generation
         db_service.db_update_project(req.project_name, current_step="image_generation")
         workflow.step_image_generation(prompts)
 
-        updated_design_result = json.dumps({"prompts": prompts}, ensure_ascii=False)
-        db_service.save_project_content(
-            req.project_name, {"design_proposals": updated_design_result}
-        )
+        try:
+            design_data = json.loads(design_json_str)
+            for key in ["prompts", "visuals", "方案", "设计方案", "方案列表"]:
+                if key in design_data and isinstance(design_data[key], list):
+                    design_data[key] = prompts
+                    break
+            else:
+                design_data["prompts"] = prompts
+
+            updated_design_result = json.dumps(design_data, ensure_ascii=False)
+            db_service.save_project_content(
+                req.project_name, {"design_proposals": updated_design_result}
+            )
+        except Exception as e:
+            print(f"⚠️ 更新设计方案 JSON 失败: {e}")
+            updated_design_result = json.dumps({"prompts": prompts}, ensure_ascii=False)
+            db_service.save_project_content(
+                req.project_name, {"design_proposals": updated_design_result}
+            )
 
         # Mark as completed
         db_service.db_update_project(
