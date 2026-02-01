@@ -7,6 +7,14 @@ set -e
 
 echo "=== 开始部署 Jimeng-Dify-Service ==="
 
+# 0. 环境检查
+if [[ "$(uname)" == "Darwin" ]]; then
+    echo "❌ 错误：检测到您正在 macOS (本地电脑) 上运行此脚本。"
+    echo "请务必先 SSH 连接到阿里云服务器，然后再运行此脚本。"
+    echo "连接命令: ssh root@8.130.32.43"
+    exit 1
+fi
+
 # 1. 检查并安装 Docker
 if ! command -v docker &> /dev/null; then
     echo "正在安装 Docker..."
