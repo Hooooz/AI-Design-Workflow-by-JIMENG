@@ -31,7 +31,13 @@ if ! docker compose version &> /dev/null; then
     apt-get update && apt-get install -y docker-compose-plugin || yum install -y docker-compose-plugin
 fi
 
-# 3. 创建工作目录
+# 3. 检查并安装 Git
+if ! command -v git &> /dev/null; then
+    echo "正在安装 Git..."
+    apt-get update && apt-get install -y git || yum install -y git
+fi
+
+# 4. 创建工作目录
 WORK_DIR="/opt/jimeng-dify"
 mkdir -p $WORK_DIR
 cd $WORK_DIR
