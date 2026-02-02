@@ -51,7 +51,12 @@ else
 fi
 
 # 5. 进入部署目录
-cd _railway_deploy_repo
+# 检查是否存在 _railway_deploy_repo 目录，如果不存在则直接在当前目录查找 docker-compose.yml
+if [ -d "_railway_deploy_repo" ]; then
+    cd _railway_deploy_repo
+else
+    echo "注意: _railway_deploy_repo 目录不存在，假设 docker-compose.yml 在根目录或当前已在正确位置"
+fi
 
 # 6. 设置环境变量（交互式输入或使用默认）
 read -p "请输入您的即梦 API Token (JIMENG_API_TOKEN): " API_TOKEN
