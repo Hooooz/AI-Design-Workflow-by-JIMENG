@@ -31,32 +31,32 @@ if ! docker compose version &> /dev/null; then
     apt-get update && apt-get install -y docker-compose-plugin || yum install -y docker-compose-plugin
 fi
 
-# 3. 检查并安装 Git
-if ! command -v git &> /dev/null; then
-    echo "正在安装 Git..."
-    apt-get update && apt-get install -y git || yum install -y git
-fi
-
-# 4. 创建工作目录
+# 3. 创建工作目录
 WORK_DIR="/opt/jimeng-dify"
 mkdir -p $WORK_DIR
 cd $WORK_DIR
 
-# 4. 拉取代码
+# 5. 拉取代码
 echo "正在拉取最新代码..."
 if [ -d ".git" ]; then
-    git pull
+    echo "发现已有代码库，尝试更新..."
+    # 尝试修复权限
+    chmod -R 755 .git 2>/dev/null || true
+    
+    if ! git pull; then
+        echo "⚠️ 更新失败（可能是权限或冲突问题），正在清除旧文件并重新下载..."
+        cd ..
+        rm -rf "$WORK_DIR"
+        mkdir -p "$WORK_DIR"
+        cd "$WORK_DIR"
+        git clone https://github.com/Hooooz/Dify-config---JIMENG.git .
+    fi
 else
     git clone https://github.com/Hooooz/Dify-config---JIMENG.git .
 fi
 
 # 5. 进入部署目录
-# 检查是否存在 _railway_deploy_repo 目录，如果不存在则直接在当前目录查找 docker-compose.yml
-if [ -d "_railway_deploy_repo" ]; then
-    cd _railway_deploy_repo
-else
-    echo "注意: _railway_deploy_repo 目录不存在，假设 docker-compose.yml 在根目录或当前已在正确位置"
-fi
+cd _railway_deploy_repo
 
 # 6. 设置环境变量（交互式输入或使用默认）
 read -p "请输入您的即梦 API Token (JIMENG_API_TOKEN): " API_TOKEN
